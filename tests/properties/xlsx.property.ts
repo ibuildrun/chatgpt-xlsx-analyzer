@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import * as fc from 'fast-check';
 import * as XLSX from 'xlsx';
 import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'fs';

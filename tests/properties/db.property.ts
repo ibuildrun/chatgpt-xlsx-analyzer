@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import fc from 'fast-check';
 import { DatabaseService } from '@/lib/db';
 import { unlinkSync, existsSync } from 'fs';
