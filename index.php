@@ -4,6 +4,9 @@
  * Forwards all requests to localhost:3000
  */
 
+// Debug mode - set to true to see debug info
+$debugMode = isset($_GET['debug']) && $_GET['debug'] === '1';
+
 $targetUrl = 'http://127.0.0.1:3000' . $_SERVER['REQUEST_URI'];
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -29,7 +32,9 @@ curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
 $postData = '';
 if (in_array($method, ['POST', 'PUT', 'PATCH'])) {
     $postData = file_get_contents('php://input');
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+    if (!empty($postData)) {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+    }
     if ($method === 'POST') {
         curl_setopt($ch, CURLOPT_POST, true);
     }
@@ -103,6 +108,24 @@ $body = substr($response, $headerSize);
 
 // Set response code
 http_response_code($httpCode);
+
+// Debug mode output
+if ($debugMode) {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'debug' => true,
+        'targetUrl' => $targetUrl,
+        'method' => $method,
+        'postDataLength' => strlen($postData),
+        'postData' => $postData,
+        'forwardedHeaders' => $headers,
+        'responseCode' => $httpCode,
+        'responseHeaderSize' => $headerSize,
+        'responseBody' => $body,
+        'responseHeaders' => $responseHeaders
+    ], JSON_PRETTY_PRINT);
+    exit;
+}
 
 // Forward response headers
 $headerLines = explode("\r\n", $responseHeaders);

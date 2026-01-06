@@ -19,12 +19,46 @@ export async function GET() {
 // POST /api/threads - Create new thread
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Get raw body for debugging
+    const contentType = request.headers.get('content-type');
+    const contentLength = request.headers.get('content-length');
+    
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      console.error('[API] JSON parse error:', parseError);
+      return NextResponse.json(
+        { 
+          error: { 
+            code: 'PARSE_ERROR', 
+            message: 'Invalid JSON body',
+            debug: {
+              contentType,
+              contentLength,
+              parseError: String(parseError)
+            }
+          } 
+        },
+        { status: 400 }
+      );
+    }
+    
     const { title } = body;
 
     if (!title || typeof title !== 'string') {
       return NextResponse.json(
-        { error: { code: 'VALIDATION_ERROR', message: 'Title is required' } },
+        { 
+          error: { 
+            code: 'VALIDATION_ERROR', 
+            message: 'Title is required',
+            debug: {
+              receivedBody: body,
+              contentType,
+              contentLength
+            }
+          } 
+        },
         { status: 400 }
       );
     }
