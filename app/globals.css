@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background-color: #ffffff;
+  color: #000000;
+}
+
+/* Programmer Minimalism Style */
+.border-brutal {
+  border: 1px solid #000000;
+}
+
+.btn-primary {
+  @apply bg-black text-white px-4 py-2 text-xs font-bold border border-black;
+  @apply hover:bg-white hover:text-black transition-colors;
+}
+
+.btn-secondary {
+  @apply bg-white text-black px-4 py-2 text-xs font-bold border border-black;
+  @apply hover:bg-black hover:text-white transition-colors;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #000000;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #333333;
+}
