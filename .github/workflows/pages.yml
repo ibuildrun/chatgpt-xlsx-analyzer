@@ -1,9 +1,11 @@
 name: Deploy to GitHub Pages
 
+# This workflow is disabled because the app uses server-side features
+# (API routes, SQLite database) that cannot be exported as a static site.
+# Use Docker deployment instead: docker-compose up -d
+
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+  workflow_dispatch:  # Manual trigger only
 
 permissions:
   contents: read
@@ -18,40 +20,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Create example XLSX
-        run: npm run setup:xlsx
-
-      - name: Build for GitHub Pages
-        run: npm run build
-        env:
-          GITHUB_PAGES: "true"
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./out
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Notice
+        run: |
+          echo "This app requires server-side features and cannot be deployed to GitHub Pages."
+          echo "Please use Docker deployment instead: docker-compose up -d"
+          exit 0
