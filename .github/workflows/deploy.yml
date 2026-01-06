@@ -39,6 +39,7 @@ jobs:
           cp index.php deploy/
           cp .htaccess deploy/
           cp test.php deploy/
+          cp phpinfo.php deploy/
           tar -czf deploy.tar.gz -C deploy .
 
       - name: Setup SSH
@@ -76,7 +77,7 @@ jobs:
             rm deploy.tar.gz
             
             # Set proper permissions for PHP files
-            chmod 644 index.php .htaccess test.php 2>/dev/null || true
+            chmod 644 index.php .htaccess test.php phpinfo.php 2>/dev/null || true
             
             # Restart PM2 process
             pm2 restart ai-chat || pm2 start npm --name "ai-chat" -- start
