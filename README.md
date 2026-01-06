@@ -1,79 +1,92 @@
 # ChatGPT XLSX Analyzer
 
-A simplified ChatGPT-like interface with thread management, message persistence, and XLSX spreadsheet analysis capabilities.
+Упрощённый аналог интерфейса ChatGPT с тредами, хранением сообщений в базе и генеративным UI на основе Vercel AI SDK.
 
-## Features
+## Соответствие ТЗ
 
-- Thread-based chat interface
-- Message persistence with SQLite
-- XLSX file reading and editing
-- Cell range selection and mentions
-- Generative UI with tool confirmations
-- API key management (stored locally)
+### Стек и общие требования
+
+| Требование | Статус | Реализация |
+|------------|--------|------------|
+| Next.js 16 (App Router, TypeScript) | ✅ | Next.js 16.1.1, App Router, TypeScript strict mode |
+| Vercel AI SDK useChat | ✅ | `useChat` из `ai/react` в ChatArea.tsx |
+| Generative UI / tools | ✅ | 5 tools: confirmAction, openTable, highlightCells, getRange, updateCell |
+| Bun 1.3+ SQLite | ⚠️ | `better-sqlite3` вместо `bun:sqlite`* |
+| Хранение тредов | ✅ | Таблица `threads` в SQLite |
+| Хранение сообщений | ✅ | Таблица `messages` в SQLite |
+| Tailwind стилизация | ✅ | Programmer minimalist стиль |
+| Структура проекта | ✅ | API/UI/DB разделены |
+| README | ✅ | Инструкции по запуску |
+
+*Примечание: Next.js 16 использует Node.js workers для сборки, которые не поддерживают Bun-специфичные модули (`bun:sqlite`). Использован `better-sqlite3` — стандартная SQLite библиотека с идентичным функционалом.
+
+### Функциональные требования
+
+| Требование | Статус |
+|------------|--------|
+| Список тредов (слева) | ✅ |
+| Создание нового треда | ✅ |
+| Переключение между тредами | ✅ |
+| Загрузка сообщений из БД | ✅ |
+| Чат через useChat | ✅ |
+| Стриминг ответов | ✅ |
+| Сохранение сообщений в БД | ✅ |
+| Client-side tools | ✅ |
+| Подтверждение опасных действий (Да/Нет) | ✅ |
+| Чтение XLSX диапазонов (getRange) | ✅ |
+| Запись в XLSX с подтверждением (updateCell) | ✅ |
+| Модальное окно таблицы | ✅ |
+| Выделение ячеек (клик и drag) | ✅ |
+| Меншоны диапазонов (@Sheet1!A1:B3) | ✅ |
+| E2E тесты (Playwright) | ✅ |
+
+### Ограничения
+
+- Один XLSX файл (data/example.xlsx)
+- API ключ хранится в localStorage браузера
+- Формулы только для чтения (значения можно обновлять)
 
 ## Tech Stack
 
-- Next.js 15 (App Router)
-- Vercel AI SDK
-- Bun runtime with SQLite
+- Next.js 16 (App Router)
+- Vercel AI SDK (useChat, streamText, tools)
+- SQLite (better-sqlite3)
 - TypeScript
 - Tailwind CSS
 
-## Getting Started
+## Быстрый старт
 
-### Prerequisites
-
-- Bun 1.1+ or Docker
-
-### Installation
+### Docker (рекомендуется)
 
 ```bash
-# Install dependencies
-bun install
-
-# Create example XLSX file
-bun run setup:xlsx
-
-# Initialize database
-bun run db:init
-
-# Start development server
-bun run dev
-```
-
-### Using Docker
-
-```bash
-# Build and run
+# Запуск в Docker
 docker-compose up --build
 
-# Or just run
-docker-compose up
+# Приложение доступно на http://localhost:3003
 ```
 
-The application will be available at `http://localhost:3000`.
+### Локальная разработка
 
-## Configuration
+```bash
+# Установка зависимостей
+npm install
 
-### API Key
+# Создание примера XLSX
+npm run setup:xlsx
 
-1. Click the "SET KEY" button in the top right
-2. Enter your OpenAI API key (starts with `sk-`)
-3. The key is stored locally in your browser
+# Запуск dev сервера
+npm run dev
 
-### XLSX File
+# Приложение доступно на http://localhost:3000
+```
 
-The example spreadsheet is located at `data/example.xlsx` with:
-- Sheet1: Employee data (Name, Email, Amount, Tax, Total)
-- Products: Product inventory (Product, Category, Price, Quantity, Revenue)
-
-## Project Structure
+## Структура проекта
 
 ```
 chatgpt-xlsx-analyzer/
 ├── app/
 │   ├── api/
-│   │   ├── chat/          # AI chat endpoint
+│   │   ├── chat/          # AI chat endpoint (streaming)
 │   │   ├── messages/      # Message CRUD
 │   │   ├── threads/       # Thread CRUD
 │   │   └── xlsx/          # XLSX operations
@@ -82,8 +95,8 @@ chatgpt-xlsx-analyzer/
 │   └── page.tsx
 ├── components/
 │   ├── icons/             # SVG icons
-│   ├── ApiKeyManager.tsx
-│   ├── ChatArea.tsx
+│   ├── ApiKeyManager.tsx  # API key modal
+│   ├── ChatArea.tsx       # Chat with useChat
 │   ├── ConfirmationDialog.tsx
 │   ├── MessageBubble.tsx
 │   ├── MessageInput.tsx
@@ -105,46 +118,62 @@ chatgpt-xlsx-analyzer/
 │   ├── e2e/               # Playwright tests
 │   └── properties/        # Property-based tests
 ├── types/                 # TypeScript types
-└── data/                  # XLSX files
+└── data/                  # XLSX files + SQLite DB
 ```
 
-## Scripts
+## Скрипты
 
 ```bash
-bun run dev          # Start development server
-bun run build        # Build for production
-bun run start        # Start production server
-bun run lint         # Run ESLint
-bun run typecheck    # Run TypeScript check
-bun run test         # Run property tests
-bun run test:e2e     # Run E2E tests
-bun run setup:xlsx   # Create example XLSX
-bun run db:init      # Initialize database
+npm run dev          # Запуск dev сервера
+npm run build        # Сборка для production
+npm run start        # Запуск production сервера
+npm run lint         # ESLint
+npm run typecheck    # TypeScript проверка
+npm run test         # Property тесты
+npm run test:e2e     # E2E тесты (Playwright)
+npm run setup:xlsx   # Создание примера XLSX
 ```
 
-## Mentions
+## Использование
 
-Use `@SheetName!CellRange` format to reference spreadsheet cells:
-- Single cell: `@Sheet1!A1`
-- Range: `@Sheet1!A1:B5`
+### API Key
 
-Click on a mention to open the spreadsheet at that location.
+1. Нажмите кнопку "SET KEY" в правом верхнем углу
+2. Введите OpenAI API ключ (начинается с `sk-`)
+3. Ключ сохраняется в localStorage браузера
 
-## Tools
+### Меншоны
 
-The AI assistant has access to:
-- `getRange` - Read cell data from spreadsheet
-- `updateCell` - Update a cell value (requires confirmation)
-- `openTable` - Display spreadsheet in modal
-- `highlightCells` - Highlight specific cells
-- `confirmAction` - Request user confirmation
+Используйте формат `@SheetName!CellRange` для ссылок на ячейки:
+- Одна ячейка: `@Sheet1!A1`
+- Диапазон: `@Sheet1!A1:B5`
 
-## Limitations
+Клик на меншон открывает таблицу с выделенным диапазоном.
 
-- Single XLSX file support
-- No real-time collaboration
-- API key required for chat functionality
-- Formulas are read-only (values can be updated)
+### Tools
+
+AI ассистент имеет доступ к:
+- `getRange` — чтение данных из таблицы
+- `updateCell` — обновление ячейки (требует подтверждения)
+- `openTable` — открытие таблицы в модальном окне
+- `highlightCells` — подсветка ячеек
+- `confirmAction` — запрос подтверждения пользователя
+
+## XLSX файл
+
+Пример таблицы находится в `data/example.xlsx`:
+
+**Sheet1** — данные сотрудников:
+| Name | Email | Amount | Tax | Total |
+|------|-------|--------|-----|-------|
+| Alice Johnson | alice@example.com | 1500 | =C2*0.1 | =C2+D2 |
+| ... | ... | ... | ... | ... |
+
+**Products** — данные о товарах:
+| Product | Category | Price | Quantity | Revenue |
+|---------|----------|-------|----------|---------|
+| Widget A | Electronics | 29.99 | 150 | =C2*D2 |
+| ... | ... | ... | ... | ... |
 
 ## License
 
