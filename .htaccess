@@ -1,5 +1,10 @@
 DirectoryIndex index.php
 
+# Enable reading of POST data
+<IfModule mod_php.c>
+    php_flag always_populate_raw_post_data On
+</IfModule>
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /
@@ -9,6 +14,6 @@ DirectoryIndex index.php
     RewriteRule ^ - [L]
 
     # Route all other requests through index.php (Next.js proxy)
-    # This includes /_next/static/* which Next.js serves internally
+    # Pass through POST data
     RewriteRule ^(.*)$ index.php [L,QSA]
 </IfModule>
