@@ -1,4 +1,4 @@
-import { Database } from 'bun:sqlite';
+import Database from 'better-sqlite3';
 import type { Thread, CreateThreadInput, Message, CreateMessageInput, UpdateMessageInput } from '@/types';
 
 const DB_PATH = process.env.DATABASE_PATH || './data/app.db';
@@ -7,16 +7,34 @@ function generateId(): string {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
 
+interface ThreadRow {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface MessageRow {
+  id: string;
+  thread_id: string;
+  role: string;
+  content: string;
+  tool_calls: string | null;
+  tool_results: string | null;
+  created_at: string;
+}
+
 export class DatabaseService {
-  private db: Database;
+  private db: Database.Database;
 
   constructor() {
-    this.db = new Database(DB_PATH, { create: true });
+    this.db = new Database(DB_PATH);
+    this.db.pragma('journal_mode = WAL');
     this.initTables();
   }
 
   private initTables(): void {
-    this.db.run(`
+    this.db.exec(`
       CREATE TABLE IF NOT EXISTS threads (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
@@ -25,7 +43,7 @@ export class DatabaseService {
       )
     `);
 
-    this.db.run(`
+    this.db.exec(`
       CREATE TABLE IF NOT EXISTS messages (
         id TEXT PRIMARY KEY,
         thread_id TEXT NOT NULL,
@@ -41,9 +59,8 @@ export class DatabaseService {
 
   // Thread methods
   getThreads(): Thread[] {
-    const rows = this.db.query<{ id: string; title: string; created_at: string; updated_at: string }, []>(
-      'SELECT * FROM threads ORDER BY created_at DESC'
-    ).all();
+    const stmt = this.db.prepare('SELECT * FROM threads ORDER BY created_at DESC');
+    const rows = stmt.all() as ThreadRow[];
     
     return rows.map(row => ({
       id: row.id,
@@ -54,9 +71,8 @@ export class DatabaseService {
   }
 
   getThread(id: string): Thread | null {
-    const row = this.db.query<{ id: string; title: string; created_at: string; updated_at: string }, [string]>(
-      'SELECT * FROM threads WHERE id = ?'
-    ).get(id);
+    const stmt = this.db.prepare('SELECT * FROM threads WHERE id = ?');
+    const row = stmt.get(id) as ThreadRow | undefined;
     
     if (!row) return null;
     
@@ -72,10 +88,10 @@ export class DatabaseService {
     const id = generateId();
     const now = new Date().toISOString();
     
-    this.db.run(
-      'INSERT INTO threads (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)',
-      [id, input.title, now, now]
+    const stmt = this.db.prepare(
+      'INSERT INTO threads (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)'
     );
+    stmt.run(id, input.title, now, now);
     
     return {
       id,
@@ -88,10 +104,10 @@ export class DatabaseService {
   updateThread(id: string, title: string): Thread | null {
     const now = new Date().toISOString();
     
-    const result = this.db.run(
-      'UPDATE threads SET title = ?, updated_at = ? WHERE id = ?',
-      [title, now, id]
+    const stmt = this.db.prepare(
+      'UPDATE threads SET title = ?, updated_at = ? WHERE id = ?'
     );
+    const result = stmt.run(title, now, id);
     
     if (result.changes === 0) return null;
     
@@ -100,24 +116,21 @@ export class DatabaseService {
 
   deleteThread(id: string): boolean {
     // Delete messages first (cascade)
-    this.db.run('DELETE FROM messages WHERE thread_id = ?', [id]);
-    const result = this.db.run('DELETE FROM threads WHERE id = ?', [id]);
+    const deleteMessages = this.db.prepare('DELETE FROM messages WHERE thread_id = ?');
+    deleteMessages.run(id);
+    
+    const deleteThread = this.db.prepare('DELETE FROM threads WHERE id = ?');
+    const result = deleteThread.run(id);
+    
     return result.changes > 0;
   }
 
   // Message methods
   getMessages(threadId: string): Message[] {
-    const rows = this.db.query<{
-      id: string;
-      thread_id: string;
-      role: string;
-      content: string;
-      tool_calls: string | null;
-      tool_results: string | null;
-      created_at: string;
-    }, [string]>(
+    const stmt = this.db.prepare(
       'SELECT * FROM messages WHERE thread_id = ? ORDER BY created_at ASC'
-    ).all(threadId);
+    );
+    const rows = stmt.all(threadId) as MessageRow[];
     
     return rows.map(row => ({
       id: row.id,
@@ -134,17 +147,17 @@ export class DatabaseService {
     const id = generateId();
     const now = new Date().toISOString();
     
-    this.db.run(
-      'INSERT INTO messages (id, thread_id, role, content, tool_calls, tool_results, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [
-        id,
-        input.threadId,
-        input.role,
-        input.content,
-        input.toolCalls ? JSON.stringify(input.toolCalls) : null,
-        input.toolResults ? JSON.stringify(input.toolResults) : null,
-        now,
-      ]
+    const stmt = this.db.prepare(
+      'INSERT INTO messages (id, thread_id, role, content, tool_calls, tool_results, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    );
+    stmt.run(
+      id,
+      input.threadId,
+      input.role,
+      input.content,
+      input.toolCalls ? JSON.stringify(input.toolCalls) : null,
+      input.toolResults ? JSON.stringify(input.toolResults) : null,
+      now
     );
     
     return {
@@ -159,9 +172,8 @@ export class DatabaseService {
   }
 
   updateMessage(id: string, input: UpdateMessageInput): Message | null {
-    const existing = this.db.query<{ id: string }, [string]>(
-      'SELECT id FROM messages WHERE id = ?'
-    ).get(id);
+    const checkStmt = this.db.prepare('SELECT id FROM messages WHERE id = ?');
+    const existing = checkStmt.get(id);
     
     if (!existing) return null;
     
@@ -183,18 +195,14 @@ export class DatabaseService {
     
     if (updates.length > 0) {
       values.push(id);
-      this.db.run(`UPDATE messages SET ${updates.join(', ')} WHERE id = ?`, values);
+      const updateStmt = this.db.prepare(
+        `UPDATE messages SET ${updates.join(', ')} WHERE id = ?`
+      );
+      updateStmt.run(...values);
     }
     
-    const row = this.db.query<{
-      id: string;
-      thread_id: string;
-      role: string;
-      content: string;
-      tool_calls: string | null;
-      tool_results: string | null;
-      created_at: string;
-    }, [string]>('SELECT * FROM messages WHERE id = ?').get(id);
+    const selectStmt = this.db.prepare('SELECT * FROM messages WHERE id = ?');
+    const row = selectStmt.get(id) as MessageRow | undefined;
     
     if (!row) return null;
     
