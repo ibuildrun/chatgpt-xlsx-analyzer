@@ -103,10 +103,17 @@ jobs:
             
             # Start PM2 process
             pm2 delete ai-chat 2>/dev/null || true
-            pm2 start npm --name "ai-chat" -- start
+            PORT=3000 pm2 start npm --name "ai-chat" -- start
             
             # Wait for app to start
-            sleep 5
+            sleep 10
+            
+            # Check if app is running
+            if ! pm2 show ai-chat | grep -q "online"; then
+              echo "App failed to start, checking logs..."
+              pm2 logs ai-chat --lines 50 --nostream
+              exit 1
+            fi
             
             # Show PM2 logs for debugging
             echo "=== PM2 Logs ==="
