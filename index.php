@@ -19,10 +19,21 @@ if (!function_exists('curl_init')) {
     exit;
 }
 
-// Read POST data FIRST before any other operations
+// Read POST data - try multiple methods
 $postData = '';
 if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'])) {
+    // Method 1: file_get_contents (most reliable)
     $postData = file_get_contents('php://input');
+    
+    // Method 2: If empty, try to reconstruct from $_POST for form data
+    if (empty($postData) && !empty($_POST)) {
+        $contentType = isset($_SERVER['CONTENT_TYPE']) ? $_SERVER['CONTENT_TYPE'] : '';
+        if (strpos($contentType, 'application/x-www-form-urlencoded') !== false) {
+            $postData = http_build_query($_POST);
+        } elseif (strpos($contentType, 'application/json') !== false) {
+            $postData = json_encode($_POST);
+        }
+    }
 }
 
 // Get incoming headers
@@ -37,6 +48,10 @@ if (function_exists('getallheaders')) {
             $incomingHeaders[$header] = $value;
         }
     }
+    // Add Content-Type from $_SERVER
+    if (isset($_SERVER['CONTENT_TYPE'])) {
+        $incomingHeaders['Content-Type'] = $_SERVER['CONTENT_TYPE'];
+    }
 }
 
 // Build headers array
@@ -49,7 +64,7 @@ foreach ($incomingHeaders as $name => $value) {
     $headers[] = "$name: $value";
 }
 
-// Ensure Content-Type for POST/PUT/PATCH
+// Ensure Content-Type and Content-Length for POST/PUT/PATCH
 if (in_array($method, ['POST', 'PUT', 'PATCH'])) {
     $hasContentType = false;
     foreach ($headers as $h) {
@@ -70,6 +85,8 @@ $retryDelay = 500000; // 0.5 seconds in microseconds
 $response = false;
 $errno = 0;
 $error = '';
+$httpCode = 0;
+$headerSize = 0;
 
 for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
     $ch = curl_init();
@@ -85,9 +102,7 @@ for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
     
     if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'])) {
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-        if ($postData !== '') {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
-        }
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
     }
     
     if (!empty($headers)) {
