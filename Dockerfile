@@ -1,31 +1,42 @@
-FROM oven/bun:1.3-alpine AS base
+FROM node:20-alpine AS base
 
 WORKDIR /app
 
+# Install build dependencies for better-sqlite3
+RUN apk add --no-cache python3 make g++
+
 # Install dependencies
 FROM base AS deps
-COPY package.json ./
-RUN bun install
+COPY package.json package-lock.json* ./
+RUN npm ci
 
 # Development
 FROM base AS dev
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 EXPOSE 3000
-CMD ["bun", "run", "dev"]
+ENV NODE_ENV=development
+CMD ["npm", "run", "dev"]
 
 # Build
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN bun run build
+RUN npm run build
 
 # Production
-FROM base AS runner
+FROM node:20-alpine AS runner
+WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+
+# Install runtime dependencies for better-sqlite3
+RUN apk add --no-cache python3 make g++
+
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/data ./data
+
 EXPOSE 3000
-CMD ["bun", "run", "server.js"]
+CMD ["npm", "run", "start"]

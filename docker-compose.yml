@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   app:
     build:
@@ -8,7 +6,13 @@ services:
     ports:
       - "3003:3000"
     volumes:
-      - .:/app
-      - /app/node_modules
+      - ./app:/app/app
+      - ./components:/app/components
+      - ./hooks:/app/hooks
+      - ./lib:/app/lib
+      - ./types:/app/types
       - ./data:/app/data
-    command: bun run dev
+      - ./public:/app/public
+    environment:
+      - NODE_ENV=development
+    command: npm run dev
