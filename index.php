@@ -4,6 +4,11 @@
  * Forwards all requests to localhost:3000
  */
 
+// Error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+
 $requestUri = $_SERVER['REQUEST_URI'];
 $targetUrl = 'http://127.0.0.1:3000' . $requestUri;
 $method = $_SERVER['REQUEST_METHOD'];
@@ -25,16 +30,20 @@ curl_setopt($ch, CURLOPT_HEADER, true);
 curl_setopt($ch, CURLOPT_TIMEOUT, 60);
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 
-// Get POST data
+// Get POST data - try reading from php://input
 $postData = '';
 if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'])) {
-    // Read raw input
-    $postData = file_get_contents('php://input');
+    // Open php://input as a stream and read it
+    $inputStream = fopen('php://input', 'r');
+    if ($inputStream) {
+        $postData = stream_get_contents($inputStream);
+        fclose($inputStream);
+    }
     
     // Set the request method
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
     
-    // Always set POSTFIELDS (even if empty)
+    // Set POST data
     curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
 }
 
