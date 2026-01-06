@@ -21,6 +21,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build better-sqlite3 for Linux (GLIBC 2.28 compatible)
+        run: |
+          # Build better-sqlite3 in AlmaLinux 8 container for GLIBC compatibility
+          mkdir -p sqlite-build-output
+          docker build -t better-sqlite3-builder -f build-sqlite.dockerfile .
+          docker run --rm -v $(pwd)/sqlite-build-output:/output better-sqlite3-builder
+          
+          # Extract and replace the binary
+          tar -xzf sqlite-build-output/better-sqlite3-linux.tar.gz -C node_modules/better-sqlite3/
+          
+          # Verify the build
+          echo "=== Checking built binary ==="
+          file node_modules/better-sqlite3/build/Release/better_sqlite3.node
+
       - name: Create example XLSX
         run: npm run setup:xlsx
 
@@ -66,6 +80,9 @@ jobs:
             
             cd /var/www/u3370847/data/www/ai.ibuildrun.ru
             
+            # Stop PM2 process before update
+            pm2 stop ai-chat 2>/dev/null || true
+            
             # Backup current deployment
             if [ -d ".next" ]; then
               rm -rf .next.backup
@@ -79,13 +96,29 @@ jobs:
             # Set proper permissions for PHP files
             chmod 644 index.php .htaccess test.php phpinfo.php 2>/dev/null || true
             
-            # Restart PM2 process
-            pm2 restart ai-chat || pm2 start npm --name "ai-chat" -- start
+            # Verify better-sqlite3 binary
+            echo "=== Checking better-sqlite3 binary ==="
+            file node_modules/better-sqlite3/build/Release/better_sqlite3.node || echo "Binary not found"
+            
+            # Check GLIBC version on server
+            echo "=== Server GLIBC version ==="
+            ldd --version | head -1
+            
+            # Start PM2 process
+            pm2 delete ai-chat 2>/dev/null || true
+            pm2 start npm --name "ai-chat" -- start
+            
+            # Wait for app to start
+            sleep 5
+            
+            # Show PM2 logs for debugging
+            echo "=== PM2 Logs ==="
+            pm2 logs ai-chat --lines 30 --nostream
             
             # Cleanup backup after successful restart
             rm -rf .next.backup
             
-            echo "Deployment completed successfully!"
+            echo "Deployment completed!"
           ENDSSH
 
       - name: Verify deployment
@@ -97,5 +130,13 @@ jobs:
             export NVM_DIR=/var/www/u3370847/data/.nvm
             source $NVM_DIR/nvm.sh
             nvm use 20
+            
+            echo "=== PM2 Status ==="
             pm2 status ai-chat
+            
+            echo "=== Testing localhost:3000 ==="
+            curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://127.0.0.1:3000/ || echo "Failed to connect"
+            
+            echo "=== Testing API endpoint ==="
+            curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://127.0.0.1:3000/api/threads || echo "Failed to connect"
           ENDSSH
