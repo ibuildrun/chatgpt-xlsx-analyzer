@@ -25,21 +25,54 @@ curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
 
-// Forward headers
-$headers = [];
-foreach (getallheaders() as $name => $value) {
-    $lowerName = strtolower($name);
-    if (!in_array($lowerName, ['host', 'connection', 'content-length'])) {
-        $headers[] = "$name: $value";
-    }
-}
-
-// Forward POST/PUT/PATCH data
+// Get POST data first (needed for Content-Length)
+$postData = '';
 if (in_array($method, ['POST', 'PUT', 'PATCH'])) {
     $postData = file_get_contents('php://input');
     curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
     if ($method === 'POST') {
         curl_setopt($ch, CURLOPT_POST, true);
+    }
+}
+
+// Forward headers - include Content-Length for POST requests
+$headers = [];
+foreach (getallheaders() as $name => $value) {
+    $lowerName = strtolower($name);
+    // Skip headers that cURL manages or that we'll set manually
+    if (in_array($lowerName, ['host', 'connection'])) {
+        continue;
+    }
+    // For Content-Length, use actual body length
+    if ($lowerName === 'content-length' && in_array($method, ['POST', 'PUT', 'PATCH'])) {
+        $headers[] = "Content-Length: " . strlen($postData);
+        continue;
+    }
+    $headers[] = "$name: $value";
+}
+
+// Ensure Content-Type is set for POST requests with body
+if (in_array($method, ['POST', 'PUT', 'PATCH']) && !empty($postData)) {
+    $hasContentType = false;
+    foreach ($headers as $h) {
+        if (stripos($h, 'Content-Type:') === 0) {
+            $hasContentType = true;
+            break;
+        }
+    }
+    if (!$hasContentType) {
+        $headers[] = 'Content-Type: application/json';
+    }
+    // Ensure Content-Length is set
+    $hasContentLength = false;
+    foreach ($headers as $h) {
+        if (stripos($h, 'Content-Length:') === 0) {
+            $hasContentLength = true;
+            break;
+        }
+    }
+    if (!$hasContentLength) {
+        $headers[] = 'Content-Length: ' . strlen($postData);
     }
 }
 
