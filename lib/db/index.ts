@@ -27,8 +27,8 @@ interface MessageRow {
 export class DatabaseService {
   private db: Database.Database;
 
-  constructor() {
-    this.db = new Database(DB_PATH);
+  constructor(dbPath?: string) {
+    this.db = new Database(dbPath || DB_PATH);
     this.db.pragma('journal_mode = WAL');
     this.initTables();
   }

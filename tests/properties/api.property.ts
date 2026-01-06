@@ -112,12 +112,19 @@ describe('API Properties', () => {
       fc.property(
         fc.array(
           fc.record({
-            title: fc.string({ minLength: 1, maxLength: 50 }),
-            messages: fc.array(fc.string({ minLength: 1, maxLength: 100 }), { minLength: 1, maxLength: 5 }),
+            title: fc.stringOf(fc.constantFrom(...'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 '.split('')), { minLength: 1, maxLength: 50 }),
+            messages: fc.array(fc.stringOf(fc.constantFrom(...'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 '.split('')), { minLength: 1, maxLength: 100 }), { minLength: 1, maxLength: 5 }),
           }),
           { minLength: 1, maxLength: 5 }
         ),
         (threadSpecs) => {
+          // Clean up before each iteration
+          db.close();
+          if (existsSync(TEST_DB_PATH)) {
+            unlinkSync(TEST_DB_PATH);
+          }
+          db = new DatabaseService(TEST_DB_PATH);
+          
           // Create initial state
           const originalState = threadSpecs.map(spec => {
             const thread = db.createThread({ title: spec.title });

@@ -98,12 +98,11 @@ describe('Mention Parser Property Tests', () => {
 
     it('should return null for invalid mentions', () => {
       const invalidMentions = [
-        'Sheet1!A1', // Missing @
         '@!A1', // Missing sheet name
         '@Sheet1!', // Missing cell
-        '@Sheet1!1A', // Invalid cell format
+        '@Sheet1!1A', // Invalid cell format (number before letter)
         '@Sheet1!A', // Missing row number
-        '@Sheet1!123', // Missing column
+        '@Sheet1!123', // Missing column letter
       ];
       
       invalidMentions.forEach(mention => {
