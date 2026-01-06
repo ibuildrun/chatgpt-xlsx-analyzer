@@ -36,8 +36,9 @@ export function useThreads(): UseThreadsReturn {
     try {
       const response = await fetch('/api/threads');
       if (!response.ok) throw new Error('Failed to load threads');
-      const data = await response.json();
-      const validThreads = (data.threads || []).filter(
+      const json = await response.json();
+      const threadsData = json.data || json.threads || [];
+      const validThreads = threadsData.filter(
         (t: Thread | null | undefined): t is Thread => 
           t !== null && t !== undefined && typeof t.id === 'string'
       );
@@ -84,8 +85,8 @@ export function useThreads(): UseThreadsReturn {
         body: JSON.stringify({ title: 'New Thread' }),
       });
       if (!response.ok) throw new Error('Failed to create thread');
-      const data = await response.json();
-      const newThread = data.thread;
+      const json = await response.json();
+      const newThread = json.data || json.thread;
       setThreads((prev) => [newThread, ...prev]);
       setActiveThreadId(newThread.id);
       return newThread;
