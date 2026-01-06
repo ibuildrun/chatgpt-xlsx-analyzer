@@ -41,6 +41,9 @@ test-results/
 # Misc
 *.tsbuildinfo
 bun.lockb
+bun.lock
+better-sqlite3-linux.tar.gz
+*.tar.gz
 
 # Kiro (managed as submodule)
 # .kiro/
