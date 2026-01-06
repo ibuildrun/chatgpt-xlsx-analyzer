@@ -18,7 +18,12 @@
 | Структура проекта | ✅ | API/UI/DB разделены |
 | README | ✅ | Инструкции по запуску |
 
-*Примечание: Next.js 16 использует Node.js workers для сборки, которые не поддерживают Bun-специфичные модули (`bun:sqlite`). Использован `better-sqlite3` — стандартная SQLite библиотека с идентичным функционалом.
+### Примечание о bun:sqlite
+
+По ТЗ требуется использование `bun:sqlite`, однако:
+- Next.js 16 использует Node.js workers для сборки, которые не поддерживают Bun-специфичные модули
+- Для совместимости с Next.js 16 используется `better-sqlite3` — стандартная SQLite библиотека с идентичным функционалом
+- Это единственное отступление от ТЗ, вызванное техническими ограничениями Next.js 16
 
 ### Функциональные требования
 
@@ -178,3 +183,24 @@ AI ассистент имеет доступ к:
 ## License
 
 MIT
+
+## CI/CD и деплой
+
+### GitHub Actions Workflows
+
+- **CI** (`ci.yml`) — lint, typecheck, тесты при каждом push/PR
+- **Release** (`release.yml`) — semantic-release при push в main
+- **Deploy** (`deploy.yml`) — автоматический деплой на production при push в main
+
+### Настройка деплоя
+
+Для работы автоматического деплоя необходимо добавить секрет в GitHub:
+
+1. Перейдите в Settings → Secrets and variables → Actions
+2. Добавьте секрет `SSH_PRIVATE_KEY` с приватным SSH ключом для доступа к серверу
+
+### Production
+
+- URL: https://ai.ibuildrun.ru
+- Сервер: server297.hosting.reg.ru
+- Process manager: PM2
