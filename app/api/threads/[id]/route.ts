@@ -5,6 +5,7 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
+// GET /api/threads/[id] - Get thread by ID
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    return NextResponse.json({ thread });
+    return NextResponse.json({ data: thread });
   } catch (error) {
     console.error('[API] Error fetching thread:', error);
     return NextResponse.json(
@@ -28,6 +29,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
+// PATCH /api/threads/[id] - Update thread
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
@@ -51,7 +53,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    return NextResponse.json({ thread });
+    return NextResponse.json({ data: thread });
   } catch (error) {
     console.error('[API] Error updating thread:', error);
     return NextResponse.json(
@@ -61,6 +63,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   }
 }
 
+// DELETE /api/threads/[id] - Delete thread
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
@@ -74,7 +77,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ data: { success: true } });
   } catch (error) {
     console.error('[API] Error deleting thread:', error);
     return NextResponse.json(

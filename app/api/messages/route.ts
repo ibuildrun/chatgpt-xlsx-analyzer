@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/db';
 import type { MessageRole } from '@/types';
 
+// GET /api/messages?threadId=xxx - Get messages by thread
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -15,6 +16,8 @@ export async function GET(request: NextRequest) {
     }
 
     const db = getDatabase();
+    
+    // Verify thread exists
     const thread = db.getThread(threadId);
     if (!thread) {
       return NextResponse.json(
@@ -24,7 +27,7 @@ export async function GET(request: NextRequest) {
     }
 
     const messages = db.getMessages(threadId);
-    return NextResponse.json({ messages });
+    return NextResponse.json({ data: messages });
   } catch (error) {
     console.error('[API] Error fetching messages:', error);
     return NextResponse.json(
@@ -34,11 +37,13 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// POST /api/messages - Create new message
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { threadId, role, content, toolCalls, toolResults } = body;
 
+    // Validation
     if (!threadId || typeof threadId !== 'string') {
       return NextResponse.json(
         { error: { code: 'VALIDATION_ERROR', message: 'threadId is required' } },
@@ -48,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     if (!role || !['user', 'assistant', 'tool'].includes(role)) {
       return NextResponse.json(
-        { error: { code: 'VALIDATION_ERROR', message: 'Valid role is required' } },
+        { error: { code: 'VALIDATION_ERROR', message: 'Valid role is required (user, assistant, tool)' } },
         { status: 400 }
       );
     }
@@ -61,6 +66,8 @@ export async function POST(request: NextRequest) {
     }
 
     const db = getDatabase();
+    
+    // Verify thread exists
     const thread = db.getThread(threadId);
     if (!thread) {
       return NextResponse.json(
@@ -77,7 +84,7 @@ export async function POST(request: NextRequest) {
       toolResults,
     });
 
-    return NextResponse.json({ message }, { status: 201 });
+    return NextResponse.json({ data: message }, { status: 201 });
   } catch (error) {
     console.error('[API] Error creating message:', error);
     return NextResponse.json(

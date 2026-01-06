@@ -10,28 +10,43 @@ export async function GET(request: NextRequest) {
 
     const xlsxService = getXlsxService();
 
+    // Get sheet names
     if (action === 'sheets') {
       const sheets = xlsxService.getSheetNames();
       return NextResponse.json({ sheets });
     }
 
+    // Get full sheet data
     if (action === 'data' && sheet) {
       const data = xlsxService.getSpreadsheetData(sheet);
       return NextResponse.json({ data });
     }
 
+    // Get range data
     if (sheet && range) {
       const cells = xlsxService.getRange(sheet, range);
-      return NextResponse.json({ sheet, range, cells });
+      return NextResponse.json({ 
+        sheet,
+        range,
+        cells,
+      });
     }
 
+    // Get formula for a cell
     if (action === 'formula' && sheet) {
       const cell = searchParams.get('cell');
       if (!cell) {
-        return NextResponse.json({ error: 'Cell address required' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'Cell address required' },
+          { status: 400 }
+        );
       }
       const formula = xlsxService.getCellFormula(sheet, cell);
-      return NextResponse.json({ sheet, cell, formula });
+      return NextResponse.json({ 
+        sheet,
+        cell,
+        formula,
+      });
     }
 
     return NextResponse.json(
@@ -56,11 +71,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Require confirmation for write operations
     if (!confirmed) {
       return NextResponse.json({
         requiresConfirmation: true,
         action: 'updateCell',
-        details: { sheet, cell, value, message: `Update cell ${cell} in ${sheet} to "${value}"?` },
+        details: {
+          sheet,
+          cell,
+          value,
+          message: `Update cell ${cell} in ${sheet} to "${value}"?`,
+        },
       });
     }
 
@@ -68,7 +89,12 @@ export async function POST(request: NextRequest) {
     xlsxService.updateCell(sheet, cell, value);
     xlsxService.saveWorkbook();
 
-    return NextResponse.json({ success: true, sheet, cell, value });
+    return NextResponse.json({
+      success: true,
+      sheet,
+      cell,
+      value,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });

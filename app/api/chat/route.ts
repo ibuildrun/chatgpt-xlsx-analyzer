@@ -8,6 +8,7 @@ export const maxDuration = 30;
 
 export async function POST(request: NextRequest) {
   try {
+    // Get API key from header
     const apiKey = request.headers.get('x-api-key');
     if (!apiKey) {
       return new Response(
@@ -26,8 +27,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Create OpenAI client with user's API key
     const openai = createAIClient(apiKey);
 
+    // Save user message to database if threadId provided
     if (threadId) {
       const db = getDatabase();
       const lastUserMessage = messages[messages.length - 1];
@@ -40,6 +43,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Stream response from AI
     const result = streamText({
       model: openai('gpt-4o-mini'),
       system: SYSTEM_PROMPT,
@@ -47,6 +51,7 @@ export async function POST(request: NextRequest) {
       tools,
       maxSteps: 5,
       onFinish: async ({ text, toolCalls, toolResults }) => {
+        // Save assistant message to database
         if (threadId && text) {
           const db = getDatabase();
           db.createMessage({
@@ -71,6 +76,7 @@ export async function POST(request: NextRequest) {
     return result.toDataStreamResponse();
   } catch (error) {
     console.error('[API] Chat error:', error);
+    
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const isAuthError = errorMessage.includes('API key') || errorMessage.includes('401');
     
@@ -81,7 +87,10 @@ export async function POST(request: NextRequest) {
           message: isAuthError ? 'Invalid API key' : 'Failed to process chat request',
         },
       }),
-      { status: isAuthError ? 401 : 500, headers: { 'Content-Type': 'application/json' } }
+      { 
+        status: isAuthError ? 401 : 500, 
+        headers: { 'Content-Type': 'application/json' } 
+      }
     );
   }
 }
