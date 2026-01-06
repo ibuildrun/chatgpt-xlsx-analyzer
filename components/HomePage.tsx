@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ThreadList } from '@/components/ThreadList';
 import { ChatArea } from '@/components/ChatArea';
 import { SpreadsheetModal } from '@/components/SpreadsheetModal';
@@ -11,16 +11,26 @@ import { useSpreadsheet } from '@/hooks/useSpreadsheet';
 import { useApiKey } from '@/hooks/useApiKey';
 
 export function HomePage() {
+  const [isInitialized, setIsInitialized] = useState(false);
+  
   const {
     threads,
     activeThread,
     activeThreadId,
     messages,
+    loading,
     setActiveThreadId,
     createThread,
     deleteThread,
     refreshMessages,
   } = useThreads();
+  
+  // Mark as initialized once threads are loaded (even if empty)
+  useEffect(() => {
+    if (!loading) {
+      setIsInitialized(true);
+    }
+  }, [loading]);
 
   const {
     isModalOpen,
@@ -41,6 +51,20 @@ export function HomePage() {
 
   // Use inputValue in a no-op to satisfy ESLint (value is used by SpreadsheetModal callback)
   void inputValue;
+
+  // Show loading screen while initializing
+  if (!isInitialized) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-white border-4 border-black">
+        <div className="text-center">
+          <div className="text-6xl mb-6 animate-pulse">⚡</div>
+          <div className="text-xs font-bold uppercase tracking-[0.3em] text-gray-600">
+            INITIALIZING SYSTEM...
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen w-full overflow-hidden border-4 border-black">

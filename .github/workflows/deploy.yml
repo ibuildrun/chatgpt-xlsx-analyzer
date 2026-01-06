@@ -87,8 +87,9 @@ jobs:
               mv .next .next.backup
             fi
             
-            # Remove old debug PHP files if they exist
+            # Remove old debug PHP files and unnecessary files
             rm -f test.php phpinfo.php test-api.php debug-post.php echo.php 2>/dev/null || true
+            rm -f *.tar.gz 2>/dev/null || true
             
             # Extract new deployment
             tar -xzf deploy.tar.gz
@@ -105,8 +106,16 @@ jobs:
             pm2 delete ai-chat 2>/dev/null || true
             PORT=3000 pm2 start npm --name "ai-chat" -- start
             
-            # Wait for app to start
-            sleep 10
+            # Wait for app to start and be healthy
+            echo "=== Waiting for app to start ==="
+            for i in 1 2 3 4 5 6; do
+              sleep 5
+              if curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/ | grep -q "200"; then
+                echo "App is healthy!"
+                break
+              fi
+              echo "Attempt $i: App not ready yet..."
+            done
             
             # Check if app is running
             if ! pm2 show ai-chat | grep -q "online"; then

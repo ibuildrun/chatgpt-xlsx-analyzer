@@ -29,25 +29,42 @@ export function useThreads(): UseThreadsReturn {
     return threads.find((t) => t?.id === activeThreadId) ?? null;
   }, [threads, activeThreadId]);
 
-  // Load threads
+  // Load threads with retry logic
   const refreshThreads = useCallback(async () => {
     setLoading(true);
     setError(null);
-    try {
-      const response = await fetch('/api/threads');
-      if (!response.ok) throw new Error('Failed to load threads');
-      const json = await response.json();
-      const threadsData = json.data || json.threads || [];
-      const validThreads = threadsData.filter(
-        (t: Thread | null | undefined): t is Thread => 
-          t !== null && t !== undefined && typeof t.id === 'string'
-      );
-      setThreads(validThreads);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
+    
+    const maxRetries = 3;
+    const retryDelay = 1000;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch('/api/threads');
+        if (!response.ok) {
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            continue;
+          }
+          throw new Error('Failed to load threads');
+        }
+        const json = await response.json();
+        const threadsData = json.data || json.threads || [];
+        const validThreads = threadsData.filter(
+          (t: Thread | null | undefined): t is Thread => 
+            t !== null && t !== undefined && typeof t.id === 'string'
+        );
+        setThreads(validThreads);
+        setLoading(false);
+        return;
+      } catch (err) {
+        if (attempt === maxRetries) {
+          setError(err instanceof Error ? err.message : 'Unknown error');
+        } else {
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
+      }
     }
+    setLoading(false);
   }, []);
 
   // Load messages for active thread
@@ -76,24 +93,41 @@ export function useThreads(): UseThreadsReturn {
     refreshMessages();
   }, [activeThreadId, refreshMessages]);
 
-  // Create new thread
+  // Create new thread with retry logic
   const createThread = useCallback(async (): Promise<Thread | null> => {
-    try {
-      const response = await fetch('/api/threads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'New Thread' }),
-      });
-      if (!response.ok) throw new Error('Failed to create thread');
-      const json = await response.json();
-      const newThread = json.data || json.thread;
-      setThreads((prev) => [newThread, ...prev]);
-      setActiveThreadId(newThread.id);
-      return newThread;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      return null;
+    const maxRetries = 3;
+    const retryDelay = 500;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch('/api/threads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: 'New Thread' }),
+        });
+        
+        if (!response.ok) {
+          if (attempt < maxRetries && response.status >= 500) {
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            continue;
+          }
+          throw new Error('Failed to create thread');
+        }
+        
+        const json = await response.json();
+        const newThread = json.data || json.thread;
+        setThreads((prev) => [newThread, ...prev]);
+        setActiveThreadId(newThread.id);
+        return newThread;
+      } catch (err) {
+        if (attempt === maxRetries) {
+          setError(err instanceof Error ? err.message : 'Unknown error');
+          return null;
+        }
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      }
     }
+    return null;
   }, []);
 
   // Delete thread
