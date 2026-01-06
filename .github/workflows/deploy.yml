@@ -88,11 +88,14 @@ jobs:
             fi
             
             # Remove old debug PHP files and unnecessary files
-            rm -f test.php phpinfo.php test-api.php debug-post.php echo.php 2>/dev/null || true
-            rm -f *.tar.gz 2>/dev/null || true
+            rm -f test.php phpinfo.php test-api.php debug-post.php echo.php test2.php 2>/dev/null || true
+            rm -f *.tar.gz better-sqlite3-linux.tar.gz bun.lock 2>/dev/null || true
             
-            # Extract new deployment
-            tar -xzf deploy.tar.gz
+            # Remove old files that will be replaced (to ensure clean deployment)
+            rm -f index.php .htaccess 2>/dev/null || true
+            
+            # Extract new deployment (overwrite existing files)
+            tar -xzf deploy.tar.gz --overwrite
             rm deploy.tar.gz
             
             # Set proper permissions for PHP files
