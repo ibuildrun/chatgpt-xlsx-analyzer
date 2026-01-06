@@ -8,6 +8,10 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
+// Read POST data IMMEDIATELY at the start of script
+// This must be done before ANY other code that might consume php://input
+$rawPostData = file_get_contents('php://input');
+
 $requestUri = $_SERVER['REQUEST_URI'];
 $targetUrl = 'http://127.0.0.1:3000' . $requestUri;
 $method = $_SERVER['REQUEST_METHOD'];
@@ -19,22 +23,8 @@ if (!function_exists('curl_init')) {
     exit;
 }
 
-// Read POST data - try multiple methods
-$postData = '';
-if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'])) {
-    // Method 1: file_get_contents (most reliable)
-    $postData = file_get_contents('php://input');
-    
-    // Method 2: If empty, try to reconstruct from $_POST for form data
-    if (empty($postData) && !empty($_POST)) {
-        $contentType = isset($_SERVER['CONTENT_TYPE']) ? $_SERVER['CONTENT_TYPE'] : '';
-        if (strpos($contentType, 'application/x-www-form-urlencoded') !== false) {
-            $postData = http_build_query($_POST);
-        } elseif (strpos($contentType, 'application/json') !== false) {
-            $postData = json_encode($_POST);
-        }
-    }
-}
+// Use the raw POST data we captured at the start
+$postData = $rawPostData;
 
 // Get incoming headers
 $incomingHeaders = [];

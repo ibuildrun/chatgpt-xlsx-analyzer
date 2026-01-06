@@ -1,8 +1,9 @@
 DirectoryIndex index.php
 
-# Ensure PHP can read raw POST data
+# PHP settings for raw POST data
 <IfModule mod_php.c>
     php_value always_populate_raw_post_data -1
+    php_flag enable_post_data_reading On
 </IfModule>
 
 <IfModule mod_rewrite.c>
@@ -13,7 +14,7 @@ DirectoryIndex index.php
     RewriteCond %{REQUEST_URI} \.php$ [NC]
     RewriteRule ^ - [L]
 
-    # Route all other requests through index.php (Next.js proxy)
-    # E=HTTP_CONTENT_TYPE ensures Content-Type is passed
-    RewriteRule ^(.*)$ index.php [E=HTTP_CONTENT_TYPE:%{HTTP:Content-Type},L,QSA]
+    # Preserve POST data through rewrite
+    # PT flag passes through to next handler
+    RewriteRule ^(.*)$ index.php [PT,L,QSA]
 </IfModule>
