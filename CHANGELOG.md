@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/compare/v1.1.0...v1.2.0) (2026-01-06)
+
+### Features
+
+* **api:** add API routes ([b631b43](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/commit/b631b437a33107199eb336443f614ed5d64b6265))
+
 ## [1.1.0](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/compare/v1.0.0...v1.1.0) (2026-01-06)
 
 ### Features
