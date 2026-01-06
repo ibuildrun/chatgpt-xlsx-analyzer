@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/compare/v1.0.0...v1.1.0) (2026-01-06)
+
+### Features
+
+* add scripts and data directories ([81c1399](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/commit/81c1399ece267ccbb1c3984587163f7b66a3e08e))
+
 ## 1.0.0 (2026-01-06)
 
 ### Features
