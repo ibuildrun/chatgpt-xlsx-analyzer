@@ -1,0 +1,4 @@
+[submodule ".kiro"]
+	path = .kiro
+	url = git@github.com:ibuildrun/chatgpt-xlsx-analyzer-kiro.git
+	branch = main
