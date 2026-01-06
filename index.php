@@ -16,6 +16,25 @@ $requestUri = $_SERVER['REQUEST_URI'];
 $targetUrl = 'http://127.0.0.1:3000' . $requestUri;
 $method = $_SERVER['REQUEST_METHOD'];
 
+// Debug endpoint - return info about what PHP received
+if ($requestUri === '/api/php-debug' || strpos($requestUri, '/api/php-debug') === 0) {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'method' => $method,
+        'uri' => $requestUri,
+        'rawPostDataLength' => strlen($rawPostData),
+        'rawPostData' => substr($rawPostData, 0, 500),
+        'contentType' => isset($_SERVER['CONTENT_TYPE']) ? $_SERVER['CONTENT_TYPE'] : null,
+        'contentLength' => isset($_SERVER['CONTENT_LENGTH']) ? $_SERVER['CONTENT_LENGTH'] : null,
+        'httpContentType' => isset($_SERVER['HTTP_CONTENT_TYPE']) ? $_SERVER['HTTP_CONTENT_TYPE'] : null,
+        'post' => $_POST,
+        'server' => array_filter($_SERVER, function($key) {
+            return strpos($key, 'HTTP_') === 0 || strpos($key, 'CONTENT_') === 0;
+        }, ARRAY_FILTER_USE_KEY),
+    ], JSON_PRETTY_PRINT);
+    exit;
+}
+
 if (!function_exists('curl_init')) {
     http_response_code(500);
     header('Content-Type: application/json');
