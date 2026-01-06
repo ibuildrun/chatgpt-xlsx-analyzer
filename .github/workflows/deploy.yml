@@ -36,6 +36,9 @@ jobs:
           cp -r data deploy/
           cp package.json deploy/
           cp next.config.mjs deploy/
+          cp index.php deploy/
+          cp .htaccess deploy/
+          cp test.php deploy/
           tar -czf deploy.tar.gz -C deploy .
 
       - name: Setup SSH
@@ -71,6 +74,9 @@ jobs:
             # Extract new deployment
             tar -xzf deploy.tar.gz
             rm deploy.tar.gz
+            
+            # Set proper permissions for PHP files
+            chmod 644 index.php .htaccess test.php 2>/dev/null || true
             
             # Restart PM2 process
             pm2 restart ai-chat || pm2 start npm --name "ai-chat" -- start
