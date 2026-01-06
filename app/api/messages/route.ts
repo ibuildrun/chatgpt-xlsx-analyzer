@@ -40,26 +40,13 @@ export async function GET(request: NextRequest) {
 // POST /api/messages - Create new message
 export async function POST(request: NextRequest) {
   try {
-    const contentType = request.headers.get('content-type');
-    const contentLength = request.headers.get('content-length');
-    
     let body;
     try {
       body = await request.json();
     } catch (parseError) {
       console.error('[API] JSON parse error:', parseError);
       return NextResponse.json(
-        { 
-          error: { 
-            code: 'PARSE_ERROR', 
-            message: 'Invalid JSON body',
-            debug: {
-              contentType,
-              contentLength,
-              parseError: String(parseError)
-            }
-          } 
-        },
+        { error: { code: 'PARSE_ERROR', message: 'Invalid JSON body' } },
         { status: 400 }
       );
     }

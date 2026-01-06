@@ -52,11 +52,6 @@ jobs:
           cp next.config.mjs deploy/
           cp index.php deploy/
           cp .htaccess deploy/
-          cp test.php deploy/
-          cp phpinfo.php deploy/
-          cp test-api.php deploy/
-          cp debug-post.php deploy/
-          cp echo.php deploy/
           tar -czf deploy.tar.gz -C deploy .
 
       - name: Setup SSH
@@ -92,20 +87,19 @@ jobs:
               mv .next .next.backup
             fi
             
+            # Remove old debug PHP files if they exist
+            rm -f test.php phpinfo.php test-api.php debug-post.php echo.php 2>/dev/null || true
+            
             # Extract new deployment
             tar -xzf deploy.tar.gz
             rm deploy.tar.gz
             
             # Set proper permissions for PHP files
-            chmod 644 index.php .htaccess test.php phpinfo.php test-api.php debug-post.php echo.php 2>/dev/null || true
+            chmod 644 index.php .htaccess 2>/dev/null || true
             
             # Verify better-sqlite3 binary
             echo "=== Checking better-sqlite3 binary ==="
             file node_modules/better-sqlite3/build/Release/better_sqlite3.node || echo "Binary not found"
-            
-            # Check GLIBC version on server
-            echo "=== Server GLIBC version ==="
-            ldd --version | head -1
             
             # Start PM2 process
             pm2 delete ai-chat 2>/dev/null || true
@@ -142,4 +136,10 @@ jobs:
             
             echo "=== Testing API endpoint ==="
             curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://127.0.0.1:3000/api/threads || echo "Failed to connect"
+            
+            echo "=== Testing POST to threads ==="
+            curl -s -X POST http://127.0.0.1:3000/api/threads \
+              -H "Content-Type: application/json" \
+              -d '{"title":"Test Thread"}' \
+              -w "\nHTTP Status: %{http_code}\n" || echo "Failed to connect"
           ENDSSH
