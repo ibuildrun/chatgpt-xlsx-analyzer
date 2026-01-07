@@ -55,24 +55,27 @@ jobs:
           cp .htaccess deploy/
           tar -czf deploy.tar.gz -C deploy .
 
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H server297.hosting.reg.ru >> ~/.ssh/known_hosts
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
 
       - name: Deploy to server
         env:
           SSH_USER: u3370847
           SSH_HOST: server297.hosting.reg.ru
+          SSH_PASS: ${{ secrets.SSH_PASSWORD }}
           DEPLOY_PATH: /var/www/u3370847/data/www/ai.ibuildrun.ru
         run: |
-          # Upload deployment package
-          scp deploy.tar.gz $SSH_USER@$SSH_HOST:$DEPLOY_PATH/
+          # Add host to known_hosts
+          mkdir -p ~/.ssh
+          ssh-keyscan -H $SSH_HOST >> ~/.ssh/known_hosts 2>/dev/null
+          
+          # Upload deployment package using sshpass
+          echo "=== Uploading deployment package ==="
+          sshpass -p "$SSH_PASS" scp -o StrictHostKeyChecking=no deploy.tar.gz $SSH_USER@$SSH_HOST:$DEPLOY_PATH/
           
           # Extract and restart application
-          ssh $SSH_USER@$SSH_HOST << 'ENDSSH'
+          echo "=== Deploying on server ==="
+          sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << 'ENDSSH'
             export NVM_DIR=/var/www/u3370847/data/.nvm
             source $NVM_DIR/nvm.sh
             nvm use 20
@@ -154,8 +157,9 @@ jobs:
         env:
           SSH_USER: u3370847
           SSH_HOST: server297.hosting.reg.ru
+          SSH_PASS: ${{ secrets.SSH_PASSWORD }}
         run: |
-          ssh $SSH_USER@$SSH_HOST << 'ENDSSH'
+          sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << 'ENDSSH'
             export NVM_DIR=/var/www/u3370847/data/.nvm
             source $NVM_DIR/nvm.sh
             nvm use 20
