@@ -23,16 +23,11 @@ jobs:
 
       - name: Build better-sqlite3 for Linux (GLIBC 2.28 compatible)
         run: |
-          # Build better-sqlite3 in AlmaLinux 8 container for GLIBC compatibility
           mkdir -p sqlite-build-output
           docker build -t better-sqlite3-builder -f build-sqlite.dockerfile .
           docker run --rm -v $(pwd)/sqlite-build-output:/output better-sqlite3-builder
-          
-          # Remove existing better-sqlite3 and extract Linux-compatible version
           rm -rf node_modules/better-sqlite3
           tar -xzf sqlite-build-output/better-sqlite3-linux.tar.gz -C node_modules/
-          
-          # Verify the build
           echo "=== Checking built binary ==="
           file node_modules/better-sqlite3/build/Release/better_sqlite3.node
 
@@ -42,40 +37,54 @@ jobs:
       - name: Build application
         run: npm run build
 
-      - name: Prepare deployment package
-        run: |
-          mkdir -p deploy
-          cp -r .next deploy/
-          cp -r node_modules deploy/
-          cp -r public deploy/
-          cp -r data deploy/
-          cp package.json deploy/
-          cp next.config.mjs deploy/
-          cp index.php deploy/
-          cp .htaccess deploy/
-          tar -czf deploy.tar.gz -C deploy .
-
       - name: Install sshpass
         run: sudo apt-get update && sudo apt-get install -y sshpass
 
-      - name: Deploy to server
+      - name: Prepare and upload deployment
         env:
           SSH_USER: u3370847
           SSH_HOST: server297.hosting.reg.ru
           SSH_PASS: ${{ secrets.SSH_PASSWORD }}
           DEPLOY_PATH: /var/www/u3370847/data/www/ai.ibuildrun.ru
         run: |
-          # Add host to known_hosts
           mkdir -p ~/.ssh
           ssh-keyscan -H $SSH_HOST >> ~/.ssh/known_hosts 2>/dev/null
           
-          # Upload deployment package using sshpass
-          echo "=== Uploading deployment package ==="
-          sshpass -p "$SSH_PASS" scp -o StrictHostKeyChecking=no deploy.tar.gz $SSH_USER@$SSH_HOST:$DEPLOY_PATH/
+          # Create smaller deployment packages (split to avoid timeout)
+          echo "=== Creating deployment packages ==="
           
-          # Extract and restart application
-          echo "=== Deploying on server ==="
-          sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << 'ENDSSH'
+          # Package 1: .next folder (build output) - most important
+          tar -czf next-build.tar.gz .next
+          echo "next-build.tar.gz: $(du -h next-build.tar.gz | cut -f1)"
+          
+          # Package 2: Static files and configs
+          tar -czf static-files.tar.gz public data package.json next.config.mjs index.php .htaccess
+          echo "static-files.tar.gz: $(du -h static-files.tar.gz | cut -f1)"
+          
+          # Package 3: better-sqlite3 only (pre-built for Linux)
+          tar -czf sqlite-module.tar.gz -C node_modules better-sqlite3
+          echo "sqlite-module.tar.gz: $(du -h sqlite-module.tar.gz | cut -f1)"
+          
+          # Upload packages one by one (smaller files = less chance of timeout)
+          echo "=== Uploading next-build.tar.gz ==="
+          sshpass -p "$SSH_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=3 next-build.tar.gz $SSH_USER@$SSH_HOST:$DEPLOY_PATH/
+          
+          echo "=== Uploading static-files.tar.gz ==="
+          sshpass -p "$SSH_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=3 static-files.tar.gz $SSH_USER@$SSH_HOST:$DEPLOY_PATH/
+          
+          echo "=== Uploading sqlite-module.tar.gz ==="
+          sshpass -p "$SSH_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=3 sqlite-module.tar.gz $SSH_USER@$SSH_HOST:$DEPLOY_PATH/
+          
+          echo "=== All packages uploaded ==="
+
+      - name: Deploy on server
+        env:
+          SSH_USER: u3370847
+          SSH_HOST: server297.hosting.reg.ru
+          SSH_PASS: ${{ secrets.SSH_PASSWORD }}
+          DEPLOY_PATH: /var/www/u3370847/data/www/ai.ibuildrun.ru
+        run: |
+          sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 $SSH_USER@$SSH_HOST << 'ENDSSH'
             export NVM_DIR=/var/www/u3370847/data/.nvm
             source $NVM_DIR/nvm.sh
             nvm use 20
@@ -85,33 +94,36 @@ jobs:
             # Stop PM2 process before update
             pm2 stop ai-chat 2>/dev/null || true
             
-            # Backup current deployment
+            # Backup current .next
             if [ -d ".next" ]; then
               rm -rf .next.backup
               mv .next .next.backup
             fi
             
-            # Remove old debug PHP files and unnecessary files
-            rm -f test.php phpinfo.php test-api.php debug-post.php echo.php test2.php 2>/dev/null || true
-            rm -f *.tar.gz better-sqlite3-linux.tar.gz bun.lock 2>/dev/null || true
+            # Extract .next build
+            echo "=== Extracting next-build.tar.gz ==="
+            tar -xzf next-build.tar.gz
+            rm next-build.tar.gz
             
-            # Remove old files that will be replaced (to ensure clean deployment)
-            rm -f index.php .htaccess 2>/dev/null || true
+            # Extract static files (overwrites existing)
+            echo "=== Extracting static-files.tar.gz ==="
+            tar -xzf static-files.tar.gz
+            rm static-files.tar.gz
             
-            # Extract new deployment (overwrite existing files)
-            tar -xzf deploy.tar.gz --overwrite
-            rm deploy.tar.gz
+            # Extract better-sqlite3 module
+            echo "=== Extracting sqlite-module.tar.gz ==="
+            rm -rf node_modules/better-sqlite3
+            tar -xzf sqlite-module.tar.gz -C node_modules/
+            rm sqlite-module.tar.gz
             
-            # Copy static files to _next folder for direct Apache serving (bypasses PHP)
+            # Setup static files for Apache
             echo "=== Setting up static files ==="
             rm -rf _next
             cp -r .next/static _next
             chmod -R 755 _next
-            
-            # Set proper permissions for PHP files
             chmod 644 index.php .htaccess 2>/dev/null || true
             
-            # Verify better-sqlite3 binary
+            # Verify better-sqlite3
             echo "=== Checking better-sqlite3 binary ==="
             file node_modules/better-sqlite3/build/Release/better_sqlite3.node || echo "Binary not found"
             
@@ -119,7 +131,7 @@ jobs:
             pm2 delete ai-chat 2>/dev/null || true
             PORT=3000 pm2 start npm --name "ai-chat" -- start
             
-            # Wait for app to start and be healthy
+            # Wait for app to start
             echo "=== Waiting for app to start ==="
             for i in 1 2 3 4 5 6; do
               sleep 5
@@ -132,24 +144,18 @@ jobs:
             
             # Check if app is running
             if ! pm2 show ai-chat | grep -q "online"; then
-              echo "App failed to start, checking logs..."
-              pm2 logs ai-chat --lines 50 --nostream
+              echo "App failed to start, restoring backup..."
+              rm -rf .next
+              mv .next.backup .next
+              pm2 start ai-chat
               exit 1
             fi
             
-            # Show PM2 logs for debugging
-            echo "=== PM2 Logs ==="
-            pm2 logs ai-chat --lines 30 --nostream
-            
-            # Cleanup backup after successful restart
+            # Cleanup
             rm -rf .next.backup
+            rm -f *.tar.gz 2>/dev/null || true
             
-            # Remove any stale index.html (we use index.php as entry point)
-            rm -f index.html 2>/dev/null || true
-            
-            # Save PM2 configuration for auto-restart
             pm2 save
-            
             echo "Deployment completed!"
           ENDSSH
 
@@ -168,14 +174,8 @@ jobs:
             pm2 status ai-chat
             
             echo "=== Testing localhost:3000 ==="
-            curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://127.0.0.1:3000/ || echo "Failed to connect"
+            curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://127.0.0.1:3000/
             
             echo "=== Testing API endpoint ==="
-            curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://127.0.0.1:3000/api/threads || echo "Failed to connect"
-            
-            echo "=== Testing POST to threads ==="
-            curl -s -X POST http://127.0.0.1:3000/api/threads \
-              -H "Content-Type: application/json" \
-              -d '{"title":"Test Thread"}' \
-              -w "\nHTTP Status: %{http_code}\n" || echo "Failed to connect"
+            curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://127.0.0.1:3000/api/threads
           ENDSSH
