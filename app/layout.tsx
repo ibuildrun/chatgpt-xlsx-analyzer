@@ -17,9 +17,6 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-// Force dynamic rendering to avoid SSR issues with AI SDK
-export const dynamic = 'force-dynamic';
-
 export default function RootLayout({
   children,
 }: {

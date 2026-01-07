@@ -1,8 +1,5 @@
 import Link from 'next/link';
 
-// Required for static export
-export const dynamic = 'force-static';
-
 export default function NotFound() {
   return (
     <div style={{
