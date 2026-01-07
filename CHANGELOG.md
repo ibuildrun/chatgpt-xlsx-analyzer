@@ -4,6 +4,16 @@
 
 * add github pages support with indexeddb storage ([5a9c2c8](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/commit/5a9c2c8361fedf2895d29e493258d87613119756))
 
+### Bug Fixes
+
+* **pages:** exclude api routes from static export ([a60dae1](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/commit/a60dae1984573a502aef98975781723c78602e40))
+
+## [1.1.0](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/compare/v1.0.1...v1.1.0) (2026-01-07)
+
+### Features
+
+* add github pages support with indexeddb storage ([5a9c2c8](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/commit/5a9c2c8361fedf2895d29e493258d87613119756))
+
 ## [1.0.1](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/compare/v1.0.0...v1.0.1) (2026-01-07)
 
 ### Bug Fixes
