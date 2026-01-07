@@ -4,6 +4,9 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'ChatGPT XLSX Analyzer',
   description: 'Minimalist chat interface with spreadsheet analysis capabilities',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 // Force dynamic rendering to avoid SSR issues with AI SDK
