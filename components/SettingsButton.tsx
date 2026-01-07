@@ -13,7 +13,7 @@ export const SettingsButton: React.FC<SettingsButtonProps> = ({
   onClick,
 }) => {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-row items-center gap-3 whitespace-nowrap">
       {!hasApiKey && (
         <span className="text-[10px] text-yellow-700 font-bold uppercase tracking-wider">
           API KEY REQUIRED
@@ -21,7 +21,7 @@ export const SettingsButton: React.FC<SettingsButtonProps> = ({
       )}
       <button
         onClick={onClick}
-        className={`flex items-center gap-2 px-3 py-2 text-xs font-bold border transition-colors ${
+        className={`flex items-center gap-2 px-3 py-2 text-xs font-bold border transition-colors whitespace-nowrap ${
           hasApiKey
             ? 'border-green-600 text-green-600 hover:bg-green-50'
             : 'border-yellow-600 text-yellow-600 hover:bg-yellow-50'
