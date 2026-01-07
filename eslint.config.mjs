@@ -9,7 +9,9 @@ export default [
     ignores: [
       "node_modules/**",
       ".next/**",
+      "_next/**",
       "out/**",
+      "sqlite-output/**",
       "*.config.js",
       "*.config.mjs",
     ],
