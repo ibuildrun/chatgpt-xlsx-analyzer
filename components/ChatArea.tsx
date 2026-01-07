@@ -112,7 +112,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden pt-14 md:pt-0">
-      <header className="p-3 md:p-4 border-b border-black flex items-center">
+      <header className="h-12 md:h-14 px-3 md:px-4 border-b border-black flex items-center">
         <div className="truncate">
           <span className="text-[10px] text-gray-500 mr-2">ACTIVE_THREAD:</span>
           <span className="text-xs font-bold">{thread.title}</span>

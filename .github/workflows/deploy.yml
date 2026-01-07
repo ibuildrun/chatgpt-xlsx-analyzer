@@ -48,9 +48,15 @@ jobs:
         run: |
           for dir in .next/node_modules/better-sqlite3-*; do
             if [ -d "$dir" ]; then
-              echo "Fixing binary in $dir"
-              cp node_modules/better-sqlite3/build/Release/better_sqlite3.node "$dir/build/Release/"
-              file "$dir/build/Release/better_sqlite3.node"
+              SRC="node_modules/better-sqlite3/build/Release/better_sqlite3.node"
+              DST="$dir/build/Release/better_sqlite3.node"
+              if [ ! "$SRC" -ef "$DST" ]; then
+                echo "Fixing binary in $dir"
+                cp "$SRC" "$DST"
+                file "$DST"
+              else
+                echo "Binary already correct in $dir"
+              fi
             fi
           done
 
