@@ -1,15 +1,25 @@
 <?php
 /**
  * PHP Proxy for Next.js application
- * Optimized for streaming large static files
+ * FastCGI-compatible version with immediate header output
  */
 
+// CRITICAL: Output headers immediately to prevent FastCGI timeout
+header('X-Proxy: 1');
+header('Content-Type: text/html; charset=utf-8');
+
+// Disable output buffering
+while (ob_get_level()) ob_end_clean();
+ini_set('output_buffering', 'Off');
+ini_set('zlib.output_compression', 'Off');
+
+// Disable error display
 error_reporting(0);
 ini_set('display_errors', 0);
 set_time_limit(120);
 
-$method = $_SERVER['REQUEST_METHOD'];
-$uri = $_SERVER['REQUEST_URI'];
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+$uri = $_SERVER['REQUEST_URI'] ?? '/';
 $targetUrl = 'http://127.0.0.1:3000' . $uri;
 
 if (!function_exists('curl_init')) {
@@ -18,11 +28,6 @@ if (!function_exists('curl_init')) {
     echo '{"error":"cURL not available"}';
     exit;
 }
-
-// Check if this is a static file request
-$isStatic = strpos($uri, '/_next/static/') === 0 || 
-            strpos($uri, '/favicon') === 0 ||
-            preg_match('/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/i', $uri);
 
 // Collect headers to forward
 $headers = [];
@@ -54,7 +59,7 @@ curl_setopt_array($ch, [
     CURLOPT_URL => $targetUrl,
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_HEADER => true,
-    CURLOPT_TIMEOUT => $isStatic ? 30 : 60,
+    CURLOPT_TIMEOUT => 60,
     CURLOPT_CONNECTTIMEOUT => 5,
     CURLOPT_FOLLOWLOCATION => true,
     CURLOPT_HTTPHEADER => $headers,
@@ -86,19 +91,22 @@ if ($errno) {
 $responseHeaders = substr($response, 0, $headerSize);
 $body = substr($response, $headerSize);
 
+// Clear previous headers and set new ones
+header_remove('X-Proxy');
+header_remove('Content-Type');
 http_response_code($httpCode);
 
 // Parse and forward headers
 foreach (explode("\r\n", $responseHeaders) as $header) {
     $header = trim($header);
     if (empty($header)) continue;
-    
+
     $lower = strtolower($header);
     if (strpos($lower, 'http/') === 0) continue;
     if (strpos($lower, 'transfer-encoding:') === 0) continue;
     if (strpos($lower, 'connection:') === 0) continue;
     if (strpos($lower, 'keep-alive:') === 0) continue;
-    
+
     header($header);
 }
 
