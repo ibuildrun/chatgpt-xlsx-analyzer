@@ -77,13 +77,21 @@ export const SpreadsheetModal: React.FC<SpreadsheetModalProps> = ({
     }
   };
 
+  const handleCellTouchStart = (row: number, col: number) => {
+    setSelection({ start: { row, col }, end: { row, col } });
+  };
+
   const handleMouseUp = () => {
     setIsSelecting(false);
   };
 
   useEffect(() => {
     document.addEventListener('mouseup', handleMouseUp);
-    return () => document.removeEventListener('mouseup', handleMouseUp);
+    document.addEventListener('touchend', handleMouseUp);
+    return () => {
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchend', handleMouseUp);
+    };
   }, []);
 
   const getSelectionRange = (): string | null => {
@@ -137,36 +145,46 @@ export const SpreadsheetModal: React.FC<SpreadsheetModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative bg-white border-4 border-black max-w-4xl w-full mx-4 max-h-[80vh] flex flex-col">
+      <div className="relative bg-white border-2 md:border-4 border-black w-full max-w-4xl max-h-[90vh] md:max-h-[80vh] flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-black flex items-center justify-between">
-          <div>
-            <span className="text-[10px] text-gray-500 mr-2">SPREADSHEET:</span>
-            <span className="text-sm font-bold">{sheetName}</span>
+        <div className="p-2 md:p-4 border-b border-black flex flex-col md:flex-row md:items-center justify-between gap-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-[10px] text-gray-500 mr-2">SHEET:</span>
+              <span className="text-xs md:text-sm font-bold">{sheetName}</span>
+            </div>
+            <button
+              onClick={onClose}
+              className="md:hidden p-2 hover:bg-gray-100 transition-colors -mr-1"
+              title="Close"
+            >
+              <CloseIcon size={16} />
+            </button>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             {selection && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono bg-gray-100 px-2 py-1 border border-gray-300">
+              <div className="flex items-center gap-2 flex-1 md:flex-none">
+                <span className="text-[10px] md:text-xs font-mono bg-gray-100 px-2 py-1 border border-gray-300">
                   {getSelectionRange()}
                 </span>
                 <button
                   onClick={handleInsertMention}
-                  className="flex items-center gap-1 px-3 py-1 bg-black text-white text-xs font-bold hover:bg-gray-800 transition-colors"
+                  className="flex items-center gap-1 px-2 md:px-3 py-1.5 md:py-1 bg-black text-white text-[10px] md:text-xs font-bold hover:bg-gray-800 transition-colors flex-1 md:flex-none justify-center"
                 >
                   <CheckIcon size={12} />
-                  INSERT MENTION
+                  <span className="hidden sm:inline">INSERT</span>
+                  <span className="sm:hidden">ADD</span>
                 </button>
               </div>
             )}
             <button
               onClick={onClose}
-              className="p-1 hover:bg-gray-100 transition-colors"
+              className="hidden md:block p-1 hover:bg-gray-100 transition-colors"
               title="Close"
             >
               <CloseIcon size={16} />
@@ -175,7 +193,7 @@ export const SpreadsheetModal: React.FC<SpreadsheetModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto p-4">
+        <div className="flex-1 overflow-auto p-2 md:p-4">
           {loading && (
             <div className="flex items-center justify-center h-32">
               <div className="text-xs text-gray-500 animate-pulse">LOADING_DATA...</div>
@@ -183,21 +201,21 @@ export const SpreadsheetModal: React.FC<SpreadsheetModalProps> = ({
           )}
 
           {error && (
-            <div className="p-4 bg-red-50 border border-red-500 text-red-700 text-sm">
+            <div className="p-3 md:p-4 bg-red-50 border border-red-500 text-red-700 text-xs md:text-sm">
               {error}
             </div>
           )}
 
           {data && !loading && (
-            <div className="overflow-auto">
-              <table className="border-collapse text-xs select-none">
+            <div className="overflow-auto -mx-2 md:mx-0">
+              <table className="border-collapse text-[10px] md:text-xs select-none">
                 <thead>
                   <tr>
-                    <th className="border border-gray-300 bg-gray-100 px-2 py-1 w-8"></th>
+                    <th className="border border-gray-300 bg-gray-100 px-1 md:px-2 py-1 w-6 md:w-8 sticky left-0 z-10"></th>
                     {Array.from({ length: data.colCount }, (_, i) => (
                       <th
                         key={i}
-                        className="border border-gray-300 bg-gray-100 px-3 py-1 font-bold text-center min-w-[80px]"
+                        className="border border-gray-300 bg-gray-100 px-2 md:px-3 py-1 font-bold text-center min-w-[60px] md:min-w-[80px]"
                       >
                         {numberToColumn(i)}
                       </th>
@@ -207,7 +225,7 @@ export const SpreadsheetModal: React.FC<SpreadsheetModalProps> = ({
                 <tbody>
                   {rows.map((row, rowIndex) => (
                     <tr key={rowIndex}>
-                      <td className="border border-gray-300 bg-gray-100 px-2 py-1 font-bold text-center">
+                      <td className="border border-gray-300 bg-gray-100 px-1 md:px-2 py-1 font-bold text-center sticky left-0 z-10">
                         {rowIndex + 1}
                       </td>
                       {row.map((cell, colIndex) => (
@@ -215,7 +233,8 @@ export const SpreadsheetModal: React.FC<SpreadsheetModalProps> = ({
                           key={colIndex}
                           onMouseDown={() => handleCellMouseDown(rowIndex, colIndex)}
                           onMouseEnter={() => handleCellMouseEnter(rowIndex, colIndex)}
-                          className={`border border-gray-300 px-2 py-1 cursor-cell font-mono ${
+                          onTouchStart={() => handleCellTouchStart(rowIndex, colIndex)}
+                          className={`border border-gray-300 px-1 md:px-2 py-1 cursor-cell font-mono whitespace-nowrap ${
                             isCellSelected(rowIndex, colIndex)
                               ? 'bg-blue-100 border-blue-500'
                               : 'hover:bg-gray-50'
@@ -223,7 +242,7 @@ export const SpreadsheetModal: React.FC<SpreadsheetModalProps> = ({
                         >
                           {cell.value !== null ? String(cell.value) : ''}
                           {cell.formula && (
-                            <span className="text-[8px] text-gray-400 ml-1" title={`=${cell.formula}`}>
+                            <span className="text-[8px] text-gray-400 ml-1 hidden md:inline" title={`=${cell.formula}`}>
                               fx
                             </span>
                           )}
@@ -238,8 +257,9 @@ export const SpreadsheetModal: React.FC<SpreadsheetModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-3 border-t border-black bg-gray-50 text-[10px] text-gray-500">
-          Click and drag to select cells. Click &quot;INSERT MENTION&quot; to add reference to chat.
+        <div className="p-2 md:p-3 border-t border-black bg-gray-50 text-[9px] md:text-[10px] text-gray-500">
+          <span className="hidden md:inline">Click and drag to select cells. Click &quot;INSERT&quot; to add reference to chat.</span>
+          <span className="md:hidden">Tap cells to select. Tap &quot;ADD&quot; to insert.</span>
         </div>
       </div>
     </div>

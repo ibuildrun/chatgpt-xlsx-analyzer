@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { PlusIcon, TrashIcon } from './icons';
+import { PlusIcon, TrashIcon, CloseIcon } from './icons';
 import type { Thread } from '@/types';
 
 interface ThreadListProps {
@@ -10,6 +10,8 @@ interface ThreadListProps {
   onSelectThread: (id: string) => void;
   onCreateThread: () => void;
   onDeleteThread: (id: string) => void;
+  onClose?: () => void;
+  isMobile?: boolean;
 }
 
 export const ThreadList: React.FC<ThreadListProps> = ({
@@ -18,14 +20,26 @@ export const ThreadList: React.FC<ThreadListProps> = ({
   onSelectThread,
   onCreateThread,
   onDeleteThread,
+  onClose,
+  isMobile = false,
 }) => {
   return (
-    <aside className="w-1/4 min-w-[240px] max-w-[320px] border-r border-black flex flex-col bg-white">
-      <header className="p-4 border-b border-black">
-        <h1 className="text-xs font-black uppercase tracking-widest mb-4">Threads</h1>
+    <aside className="h-full border-r border-black flex flex-col bg-white">
+      <header className="p-3 md:p-4 border-b border-black">
+        <div className="flex items-center justify-between mb-3 md:mb-4">
+          <h1 className="text-xs font-black uppercase tracking-widest">Threads</h1>
+          {isMobile && onClose && (
+            <button
+              onClick={onClose}
+              className="md:hidden p-2 hover:bg-gray-100 -mr-2"
+            >
+              <CloseIcon size={16} />
+            </button>
+          )}
+        </div>
         <button
           onClick={onCreateThread}
-          className="w-full bg-black text-white px-4 py-2 text-xs font-bold hover:bg-gray-800 transition-colors border border-black flex items-center justify-center gap-2"
+          className="w-full bg-black text-white px-4 py-2.5 md:py-2 text-xs font-bold hover:bg-gray-800 transition-colors border border-black flex items-center justify-center gap-2"
         >
           <PlusIcon size={12} />
           <span>NEW THREAD</span>
@@ -42,7 +56,7 @@ export const ThreadList: React.FC<ThreadListProps> = ({
           <div
             key={thread.id}
             onClick={() => onSelectThread(thread.id)}
-            className={`p-4 border-b border-black cursor-pointer group transition-colors flex justify-between items-start
+            className={`p-3 md:p-4 border-b border-black cursor-pointer group transition-colors flex justify-between items-start
               ${activeThreadId === thread.id ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
           >
             <div className="flex-1 min-w-0">
@@ -58,7 +72,7 @@ export const ThreadList: React.FC<ThreadListProps> = ({
                 e.stopPropagation();
                 onDeleteThread(thread.id);
               }}
-              className="opacity-0 group-hover:opacity-100 text-[10px] hover:text-red-600 transition-opacity ml-2 p-1"
+              className="opacity-100 md:opacity-0 group-hover:opacity-100 text-[10px] hover:text-red-600 transition-opacity ml-2 p-2 md:p-1"
               title="Delete thread"
             >
               <TrashIcon size={14} />
@@ -67,7 +81,7 @@ export const ThreadList: React.FC<ThreadListProps> = ({
         ))}
       </nav>
 
-      <footer className="p-4 border-t border-black bg-gray-50 text-[8px] text-gray-400 flex flex-col gap-1">
+      <footer className="p-3 md:p-4 border-t border-black bg-gray-50 text-[8px] text-gray-400 flex flex-col gap-1">
         <div>XLSX ANALYZER v1.0.0</div>
         <div>STATUS: SYSTEM_READY</div>
       </footer>

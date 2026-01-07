@@ -58,24 +58,24 @@ export const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative bg-white border-4 border-black max-w-md w-full mx-4">
-        <div className="p-6">
+      <div className="relative bg-white border-2 md:border-4 border-black max-w-md w-full">
+        <div className="p-4 md:p-6">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4 md:mb-6">
             <div className="flex items-center gap-2">
-              <KeyIcon size={20} />
-              <h2 className="text-sm font-black uppercase tracking-widest">
-                API Key Settings
+              <KeyIcon size={18} />
+              <h2 className="text-xs md:text-sm font-black uppercase tracking-widest">
+                API Key
               </h2>
             </div>
             <button
               onClick={onClose}
-              className="p-1 hover:bg-gray-100 transition-colors"
+              className="p-2 hover:bg-gray-100 transition-colors -mr-2"
             >
               <CloseIcon size={16} />
             </button>
@@ -83,13 +83,13 @@ export const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({
 
           {/* Current Key Status */}
           {apiKey && (
-            <div className="mb-6 p-3 bg-gray-100 border border-gray-300">
+            <div className="mb-4 md:mb-6 p-3 bg-gray-100 border border-gray-300">
               <div className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">
                 CURRENT KEY
               </div>
               <div className="flex items-center justify-between">
-                <span className="font-mono text-sm">{maskedKey}</span>
-                <span className={`text-xs ${isValid ? 'text-green-600' : 'text-red-600'}`}>
+                <span className="font-mono text-xs md:text-sm">{maskedKey}</span>
+                <span className={`text-[10px] md:text-xs ${isValid ? 'text-green-600' : 'text-red-600'}`}>
                   {isValid ? 'VALID' : 'INVALID'}
                 </span>
               </div>
@@ -117,8 +117,8 @@ export const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({
           </div>
 
           {/* Info */}
-          <div className="mb-6 text-[10px] text-gray-500">
-            Your API key is stored locally in your browser and never sent to our servers.
+          <div className="mb-4 md:mb-6 text-[10px] text-gray-500">
+            Your API key is stored locally in your browser.
             Get your key from{' '}
             <a
               href="https://platform.openai.com/api-keys"
@@ -131,20 +131,20 @@ export const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 justify-end">
+          <div className="flex gap-2 md:gap-3 justify-end">
             {apiKey && (
               <button
                 onClick={handleRemove}
-                className="flex items-center gap-2 px-4 py-2 border border-red-600 text-red-600 text-xs font-bold hover:bg-red-50 transition-colors"
+                className="flex items-center gap-1 md:gap-2 px-3 md:px-4 py-2.5 md:py-2 border border-red-600 text-red-600 text-xs font-bold hover:bg-red-50 transition-colors"
               >
                 <TrashIcon size={12} />
-                REMOVE
+                <span className="hidden sm:inline">REMOVE</span>
               </button>
             )}
             <button
               onClick={handleSave}
               disabled={!inputValue.trim()}
-              className="flex items-center gap-2 px-4 py-2 bg-black text-white text-xs font-bold hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-1 md:gap-2 px-4 md:px-4 py-2.5 md:py-2 bg-black text-white text-xs font-bold hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
               <CheckIcon size={12} />
               SAVE

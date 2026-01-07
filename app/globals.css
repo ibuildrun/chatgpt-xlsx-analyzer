@@ -44,3 +44,43 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #333333;
 }
+
+/* Mobile-first responsive utilities */
+@layer utilities {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+/* Mobile sidebar overlay */
+@media (max-width: 768px) {
+  .sidebar-overlay {
+    @apply fixed inset-0 bg-black bg-opacity-50 z-40;
+  }
+  
+  .sidebar-mobile {
+    @apply fixed left-0 top-0 bottom-0 z-50 w-[280px] transform transition-transform duration-300;
+  }
+  
+  .sidebar-mobile.closed {
+    @apply -translate-x-full;
+  }
+  
+  .sidebar-mobile.open {
+    @apply translate-x-0;
+  }
+}
+
+/* Touch-friendly tap targets */
+@media (max-width: 768px) {
+  button, 
+  [role="button"],
+  a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

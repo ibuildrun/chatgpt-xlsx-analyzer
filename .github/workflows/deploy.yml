@@ -36,52 +36,121 @@ jobs:
       - name: Build application
         run: npm run build
 
+      - name: Fix better-sqlite3 in .next/node_modules
+        run: |
+          # Next.js copies better-sqlite3 to .next/node_modules during build
+          # We need to replace the binary with Linux version
+          for dir in .next/node_modules/better-sqlite3-*; do
+            if [ -d "$dir" ]; then
+              echo "Fixing binary in $dir"
+              cp node_modules/better-sqlite3/build/Release/better_sqlite3.node "$dir/build/Release/"
+              file "$dir/build/Release/better_sqlite3.node"
+            fi
+          done
+
       - name: Prepare deployment files
         run: |
-          mkdir -p deploy-ftp
+          mkdir -p deploy-package
           
-          # Copy .next folder
-          cp -r .next deploy-ftp/
+          # Copy .next folder (with fixed binaries)
+          cp -r .next deploy-package/
           
           # Copy static files
-          cp -r public deploy-ftp/
-          cp -r data deploy-ftp/
-          cp package.json deploy-ftp/
-          cp next.config.mjs deploy-ftp/
-          cp index.php deploy-ftp/
-          cp .htaccess deploy-ftp/
+          cp -r public deploy-package/
+          cp -r data deploy-package/
+          cp package.json deploy-package/
+          cp next.config.mjs deploy-package/
+          cp index.php deploy-package/
+          cp .htaccess deploy-package/
           
           # Copy better-sqlite3 module
-          mkdir -p deploy-ftp/node_modules
-          cp -r node_modules/better-sqlite3 deploy-ftp/node_modules/
+          mkdir -p deploy-package/node_modules
+          cp -r node_modules/better-sqlite3 deploy-package/node_modules/
           
-          # Create _next folder for static serving
-          cp -r .next/static deploy-ftp/_next
+          # Create _next folder for static serving (Apache bypass)
+          cp -r .next/static deploy-package/_next
+          
+          # Copy scripts
+          mkdir -p deploy-package/scripts
+          cp scripts/healthcheck.sh deploy-package/scripts/
           
           echo "=== Deployment package contents ==="
-          du -sh deploy-ftp/*
+          du -sh deploy-package/*
+          
+          # Create deployment archive
+          tar -czf deploy-package.tar.gz -C deploy-package .
+          ls -lh deploy-package.tar.gz
 
-      - name: Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      - name: Upload deployment artifact
+        uses: actions/upload-artifact@v4
         with:
-          server: server297.hosting.reg.ru
-          username: u3370847
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./deploy-ftp/
-          server-dir: /www/ai.ibuildrun.ru/
-          dangerous-clean-slate: false
+          name: deploy-package
+          path: deploy-package.tar.gz
+          retention-days: 7
 
-      - name: Restart PM2 via SSH (optional - may fail if SSH blocked)
+      - name: Deploy via SFTP
+        continue-on-error: true
+        env:
+          SFTP_HOST: server297.hosting.reg.ru
+          SFTP_USER: u3370847
+          SFTP_PASS: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          # Install sshpass for password-based SFTP
+          sudo apt-get update && sudo apt-get install -y sshpass lftp
+          
+          # Try SFTP deployment
+          echo "Attempting SFTP deployment..."
+          sshpass -p "$SFTP_PASS" sftp -o StrictHostKeyChecking=no -o ConnectTimeout=30 -b - "$SFTP_USER@$SFTP_HOST" << 'EOF' || echo "SFTP failed, see artifact for manual deployment"
+          cd /www/ai.ibuildrun.ru
+          put deploy-package.tar.gz
+          bye
+          EOF
+
+      - name: Extract and restart via SSH
         continue-on-error: true
         env:
           SSH_PASS: ${{ secrets.SSH_PASSWORD }}
         run: |
-          sudo apt-get update && sudo apt-get install -y sshpass
-          sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 u3370847@server297.hosting.reg.ru << 'ENDSSH' || echo "SSH blocked, PM2 restart skipped"
+          sudo apt-get install -y sshpass || true
+          sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 u3370847@server297.hosting.reg.ru << 'ENDSSH' || echo "SSH blocked, manual extraction needed"
             export NVM_DIR=/var/www/u3370847/data/.nvm
             source $NVM_DIR/nvm.sh
             nvm use 20
             cd /var/www/u3370847/data/www/ai.ibuildrun.ru
+            
+            # Backup current version
+            if [ -d ".next.backup" ]; then rm -rf .next.backup; fi
+            if [ -d ".next" ]; then mv .next .next.backup; fi
+            
+            # Extract new version
+            tar -xzf deploy-package.tar.gz
+            rm deploy-package.tar.gz
+            
+            # Set permissions
+            chmod -R 755 _next
+            chmod +x scripts/healthcheck.sh
+            
+            # Restart PM2
             pm2 restart ai-chat || pm2 start npm --name "ai-chat" -- start
             pm2 save
+            
+            echo "Deployment complete!"
           ENDSSH
+
+      - name: Deployment status
+        run: |
+          echo "============================================"
+          echo "DEPLOYMENT STATUS"
+          echo "============================================"
+          echo ""
+          echo "If automatic deployment failed, download the"
+          echo "deploy-package artifact and manually upload"
+          echo "to the server via SCP/SFTP."
+          echo ""
+          echo "Manual deployment steps:"
+          echo "1. Download deploy-package.tar.gz from GitHub Actions artifacts"
+          echo "2. Upload to server: scp deploy-package.tar.gz u3370847@server297.hosting.reg.ru:/www/ai.ibuildrun.ru/"
+          echo "3. SSH to server and extract: tar -xzf deploy-package.tar.gz"
+          echo "4. Set permissions: chmod -R 755 _next"
+          echo "5. Restart PM2: pm2 restart ai-chat"
+          echo "============================================"

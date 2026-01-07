@@ -162,3 +162,35 @@ export const KeyIcon: React.FC<IconProps> = ({ className = '', size = 16 }) => (
     <path d="M8 8h7M12 6v4M15 6v4" />
   </svg>
 );
+
+export const MenuIcon: React.FC<IconProps> = ({ className = '', size = 16 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="square"
+    className={className}
+  >
+    <line x1="2" y1="4" x2="14" y2="4" />
+    <line x1="2" y1="8" x2="14" y2="8" />
+    <line x1="2" y1="12" x2="14" y2="12" />
+  </svg>
+);
+
+export const ChevronLeftIcon: React.FC<IconProps> = ({ className = '', size = 16 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="square"
+    className={className}
+  >
+    <path d="M10 3L5 8l5 5" />
+  </svg>
+);

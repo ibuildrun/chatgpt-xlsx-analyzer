@@ -13,15 +13,15 @@ export const SettingsButton: React.FC<SettingsButtonProps> = ({
   onClick,
 }) => {
   return (
-    <div className="flex flex-row items-center gap-3 flex-nowrap">
+    <div className="flex flex-row items-center gap-2 md:gap-3 flex-nowrap">
       {!hasApiKey && (
-        <span className="text-[10px] text-yellow-700 font-bold uppercase tracking-wider whitespace-nowrap">
+        <span className="hidden sm:block text-[10px] text-yellow-700 font-bold uppercase tracking-wider whitespace-nowrap">
           API KEY REQUIRED
         </span>
       )}
       <button
         onClick={onClick}
-        className={`flex flex-row items-center gap-2 px-3 py-2 text-xs font-bold border transition-colors whitespace-nowrap ${
+        className={`flex flex-row items-center gap-1 md:gap-2 px-2 md:px-3 py-2 text-[10px] md:text-xs font-bold border transition-colors whitespace-nowrap ${
           hasApiKey
             ? 'border-green-600 text-green-600 hover:bg-green-50'
             : 'border-yellow-600 text-yellow-600 hover:bg-yellow-50'
@@ -29,7 +29,7 @@ export const SettingsButton: React.FC<SettingsButtonProps> = ({
         title={hasApiKey ? 'API key configured' : 'API key required'}
       >
         {hasApiKey ? <KeyIcon size={14} /> : <SettingsIcon size={14} />}
-        <span>{hasApiKey ? 'KEY SET' : 'SET KEY'}</span>
+        <span>{hasApiKey ? 'KEY' : 'KEY'}</span>
       </button>
     </div>
   );

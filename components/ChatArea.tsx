@@ -97,12 +97,12 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
   if (!thread) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-        <div className="text-8xl mb-8 border-4 border-black p-4">_</div>
-        <h2 className="text-xl font-bold mb-4 uppercase tracking-[0.2em]">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 text-center">
+        <div className="text-6xl md:text-8xl mb-6 md:mb-8 border-4 border-black p-3 md:p-4">_</div>
+        <h2 className="text-lg md:text-xl font-bold mb-3 md:mb-4 uppercase tracking-[0.15em] md:tracking-[0.2em]">
           System Initialized
         </h2>
-        <p className="text-xs text-gray-500 mb-8 max-w-sm leading-relaxed">
+        <p className="text-[10px] md:text-xs text-gray-500 mb-6 md:mb-8 max-w-sm leading-relaxed px-4">
           Welcome to the XLSX Analyzer Terminal. Select an existing thread or
           create a new session to begin processing spreadsheet data.
         </p>
@@ -111,19 +111,19 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <header className="p-4 border-b border-black flex items-center">
-        <div>
+    <div className="flex-1 flex flex-col overflow-hidden pt-14 md:pt-0">
+      <header className="p-3 md:p-4 border-b border-black flex items-center">
+        <div className="truncate">
           <span className="text-[10px] text-gray-500 mr-2">ACTIVE_THREAD:</span>
           <span className="text-xs font-bold">{thread.title}</span>
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6 scroll-smooth" ref={scrollRef}>
+      <div className="flex-1 overflow-y-auto p-3 md:p-6 scroll-smooth" ref={scrollRef}>
         {displayMessages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-gray-300 opacity-50 space-y-2">
-            <div className="text-4xl border-2 border-current p-2">_</div>
-            <div className="text-xs font-bold tracking-widest">AWAITING_INPUT...</div>
+            <div className="text-3xl md:text-4xl border-2 border-current p-2">_</div>
+            <div className="text-[10px] md:text-xs font-bold tracking-widest">AWAITING_INPUT...</div>
           </div>
         )}
         {displayMessages.map((m) => (
@@ -149,10 +149,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         disabled={isLoading || !apiKey || !!pendingConfirmation}
         placeholder={
           !apiKey
-            ? 'Set your API key to start chatting...'
+            ? 'Set API key to chat...'
             : pendingConfirmation
             ? 'Waiting for confirmation...'
-            : 'Type message or paste range... [CTRL+ENTER to send]'
+            : 'Type message... [CTRL+ENTER]'
         }
       />
     </div>
