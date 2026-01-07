@@ -5,9 +5,11 @@ node_modules/
 
 # Build
 .next/
+_next/
 out/
 build/
 dist/
+sqlite-output/
 
 # Database
 *.db
