@@ -1,13 +1,13 @@
 <?php
 /**
  * PHP Proxy for Next.js application
- * Handles chunked transfer encoding properly
+ * Optimized for streaming large static files
  */
 
 error_reporting(0);
 ini_set('display_errors', 0);
+set_time_limit(120);
 
-$postData = file_get_contents('php://input');
 $method = $_SERVER['REQUEST_METHOD'];
 $uri = $_SERVER['REQUEST_URI'];
 $targetUrl = 'http://127.0.0.1:3000' . $uri;
@@ -18,6 +18,11 @@ if (!function_exists('curl_init')) {
     echo '{"error":"cURL not available"}';
     exit;
 }
+
+// Check if this is a static file request
+$isStatic = strpos($uri, '/_next/static/') === 0 || 
+            strpos($uri, '/favicon') === 0 ||
+            preg_match('/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/i', $uri);
 
 // Collect headers to forward
 $headers = [];
@@ -33,11 +38,15 @@ foreach ($_SERVER as $key => $value) {
 if (isset($_SERVER['CONTENT_TYPE'])) {
     $headers[] = 'Content-Type: ' . $_SERVER['CONTENT_TYPE'];
 }
-if ($postData && in_array($method, ['POST', 'PUT', 'PATCH'])) {
-    $headers[] = 'Content-Length: ' . strlen($postData);
+
+$postData = null;
+if (in_array($method, ['POST', 'PUT', 'PATCH'])) {
+    $postData = file_get_contents('php://input');
+    if ($postData) {
+        $headers[] = 'Content-Length: ' . strlen($postData);
+    }
 }
 
-// Force identity encoding to avoid chunked issues
 $headers[] = 'Accept-Encoding: identity';
 
 $ch = curl_init();
@@ -45,11 +54,12 @@ curl_setopt_array($ch, [
     CURLOPT_URL => $targetUrl,
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_HEADER => true,
-    CURLOPT_TIMEOUT => 60,
-    CURLOPT_CONNECTTIMEOUT => 10,
+    CURLOPT_TIMEOUT => $isStatic ? 30 : 60,
+    CURLOPT_CONNECTTIMEOUT => 5,
     CURLOPT_FOLLOWLOCATION => true,
     CURLOPT_HTTPHEADER => $headers,
     CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+    CURLOPT_BUFFERSIZE => 65536,
 ]);
 
 if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'])) {
@@ -59,17 +69,8 @@ if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'])) {
     }
 }
 
-// Execute with retry
-$response = false;
-$errno = 0;
-for ($i = 0; $i < 2; $i++) {
-    $response = curl_exec($ch);
-    $errno = curl_errno($ch);
-    if ($errno === 0) break;
-    if ($errno !== CURLE_COULDNT_CONNECT && $errno !== CURLE_OPERATION_TIMEDOUT) break;
-    usleep(300000);
-}
-
+$response = curl_exec($ch);
+$errno = curl_errno($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
 $error = curl_error($ch);
@@ -87,6 +88,7 @@ $body = substr($response, $headerSize);
 
 http_response_code($httpCode);
 
+// Parse and forward headers
 foreach (explode("\r\n", $responseHeaders) as $header) {
     $header = trim($header);
     if (empty($header)) continue;
@@ -100,4 +102,5 @@ foreach (explode("\r\n", $responseHeaders) as $header) {
     header($header);
 }
 
+// Output body
 echo $body;

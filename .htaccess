@@ -1,6 +1,6 @@
 DirectoryIndex index.php
 
-# PHP settings for raw POST data
+# PHP settings
 <IfModule mod_php.c>
     php_value always_populate_raw_post_data -1
     php_flag enable_post_data_reading On
@@ -10,11 +10,42 @@ DirectoryIndex index.php
     RewriteEngine On
     RewriteBase /
 
-    # Skip rewrite for actual PHP files
+    # Serve Next.js static files directly from _next folder (copy of .next/static)
+    # This bypasses PHP completely for static assets
+    RewriteCond %{REQUEST_URI} ^/_next/static/(.*)$
+    RewriteCond %{DOCUMENT_ROOT}/_next/%1 -f
+    RewriteRule ^_next/static/(.*)$ _next/$1 [L]
+
+    # Skip rewrite for actual files that exist
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # Skip rewrite for PHP files
     RewriteCond %{REQUEST_URI} \.php$ [NC]
     RewriteRule ^ - [L]
 
-    # Preserve POST data through rewrite
-    # PT flag passes through to next handler
+    # All other requests go through PHP proxy to Node.js
     RewriteRule ^(.*)$ index.php [PT,L,QSA]
+</IfModule>
+
+# Set correct MIME types for static files
+<IfModule mod_mime.c>
+    AddType application/javascript .js
+    AddType text/css .css
+    AddType image/svg+xml .svg
+    AddType application/json .json
+</IfModule>
+
+# Enable compression for static files
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/json
+</IfModule>
+
+# Cache static files
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType text/css "access plus 1 year"
 </IfModule>

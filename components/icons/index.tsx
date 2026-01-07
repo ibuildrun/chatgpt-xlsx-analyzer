@@ -5,6 +5,38 @@ interface IconProps {
   size?: number;
 }
 
+export const LoadingIcon: React.FC<IconProps> = ({ className = '', size = 48 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 48 48"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    className={className}
+  >
+    <rect x="8" y="8" width="32" height="32" strokeLinecap="square" />
+    <line x1="16" y1="20" x2="32" y2="20" />
+    <line x1="16" y1="28" x2="24" y2="28" />
+  </svg>
+);
+
+export const TerminalIcon: React.FC<IconProps> = ({ className = '', size = 64 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 64 64"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="3"
+    strokeLinecap="square"
+    className={className}
+  >
+    <rect x="8" y="8" width="48" height="48" />
+    <line x1="16" y1="48" x2="48" y2="48" />
+  </svg>
+);
+
 export const PlusIcon: React.FC<IconProps> = ({ className = '', size = 16 }) => (
   <svg
     width={size}

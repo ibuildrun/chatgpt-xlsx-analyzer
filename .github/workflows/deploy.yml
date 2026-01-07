@@ -28,8 +28,9 @@ jobs:
           docker build -t better-sqlite3-builder -f build-sqlite.dockerfile .
           docker run --rm -v $(pwd)/sqlite-build-output:/output better-sqlite3-builder
           
-          # Extract and replace the binary
-          tar -xzf sqlite-build-output/better-sqlite3-linux.tar.gz -C node_modules/better-sqlite3/
+          # Remove existing better-sqlite3 and extract Linux-compatible version
+          rm -rf node_modules/better-sqlite3
+          tar -xzf sqlite-build-output/better-sqlite3-linux.tar.gz -C node_modules/
           
           # Verify the build
           echo "=== Checking built binary ==="
@@ -97,6 +98,12 @@ jobs:
             # Extract new deployment (overwrite existing files)
             tar -xzf deploy.tar.gz --overwrite
             rm deploy.tar.gz
+            
+            # Copy static files to _next folder for direct Apache serving (bypasses PHP)
+            echo "=== Setting up static files ==="
+            rm -rf _next
+            cp -r .next/static _next
+            chmod -R 755 _next
             
             # Set proper permissions for PHP files
             chmod 644 index.php .htaccess 2>/dev/null || true

@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ThreadList } from '@/components/ThreadList';
 import { ChatArea } from '@/components/ChatArea';
 import { SpreadsheetModal } from '@/components/SpreadsheetModal';
 import { ApiKeyManager } from '@/components/ApiKeyManager';
 import { SettingsButton } from '@/components/SettingsButton';
+import { LoadingIcon, TerminalIcon } from '@/components/icons';
 import { useThreads } from '@/hooks/useThreads';
 import { useSpreadsheet } from '@/hooks/useSpreadsheet';
 import { useApiKey } from '@/hooks/useApiKey';
@@ -25,11 +26,19 @@ export function HomePage() {
     refreshMessages,
   } = useThreads();
   
-  // Mark as initialized once threads are loaded (even if empty)
+  // Mark as initialized once threads are loaded OR after timeout
   useEffect(() => {
     if (!loading) {
       setIsInitialized(true);
+      return;
     }
+    
+    // Fallback: force initialize after 5 seconds even if still loading
+    const timeout = setTimeout(() => {
+      setIsInitialized(true);
+    }, 5000);
+    
+    return () => clearTimeout(timeout);
   }, [loading]);
 
   const {
@@ -57,7 +66,9 @@ export function HomePage() {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-white border-4 border-black">
         <div className="text-center">
-          <div className="text-6xl mb-6 animate-pulse">⚡</div>
+          <div className="mb-6 animate-pulse flex justify-center">
+            <LoadingIcon size={64} className="text-black" />
+          </div>
           <div className="text-xs font-bold uppercase tracking-[0.3em] text-gray-600">
             INITIALIZING SYSTEM...
           </div>
@@ -98,7 +109,9 @@ export function HomePage() {
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-            <div className="text-8xl mb-8 border-4 border-black p-4">_</div>
+            <div className="mb-8 border-4 border-black p-4">
+              <TerminalIcon size={64} className="text-black" />
+            </div>
             <h2 className="text-xl font-bold mb-4 uppercase tracking-[0.2em]">
               System Initialized
             </h2>
