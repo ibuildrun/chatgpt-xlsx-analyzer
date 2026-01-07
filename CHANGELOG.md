@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/compare/v1.0.0...v1.0.1) (2026-01-07)
+
+### Bug Fixes
+
+* **lint:** ignore build artifacts and remove unused imports ([095726c](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/commit/095726c94c49dcd3f25799f3eb68d2c517d4cf29))
+
 ## 1.0.0 (2026-01-07)
 
 ### Features
