@@ -4,7 +4,18 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useChat } from 'ai/react';
 import { MessageBubble } from './MessageBubble';
 import { MessageInput } from './MessageInput';
+import { useStaticChat } from '@/hooks/useStaticChat';
 import type { Message, Thread } from '@/types';
+import type { Message as ChatMessage } from 'ai';
+
+// Detect if running in static mode (GitHub Pages)
+function isStaticMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    window.location.hostname.includes('github.io') ||
+    process.env.NEXT_PUBLIC_STATIC_MODE === 'true'
+  );
+}
 
 interface ChatAreaProps {
   thread: Thread | null;
@@ -14,14 +25,15 @@ interface ChatAreaProps {
   onMessagesChange?: () => void;
 }
 
-export const ChatArea: React.FC<ChatAreaProps> = ({
+// Server mode chat component
+const ServerChat: React.FC<ChatAreaProps & { scrollRef: React.RefObject<HTMLDivElement | null> }> = ({
   thread,
   initialMessages,
   apiKey,
   onOpenSpreadsheet,
   onMessagesChange,
+  scrollRef,
 }) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
   const [pendingConfirmation, setPendingConfirmation] = useState<string | null>(null);
 
   const {
@@ -50,7 +62,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     },
   });
 
-  // Reset messages when thread changes
   useEffect(() => {
     setMessages(
       initialMessages.map((m) => ({
@@ -62,16 +73,14 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     );
   }, [thread?.id, initialMessages, setMessages]);
 
-  // Auto-scroll to bottom
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, scrollRef]);
 
   const handleToolConfirm = async (toolCallId: string, confirmed: boolean) => {
     setPendingConfirmation(null);
-    
     await append({
       role: 'user',
       content: confirmed 
@@ -86,7 +95,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     handleSubmit(e);
   };
 
-  // Convert chat messages to our format for display
   const displayMessages: Message[] = messages.map((m) => ({
     id: m.id,
     threadId: thread?.id || '',
@@ -94,6 +102,157 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     content: m.content,
     createdAt: m.createdAt || new Date(),
   }));
+
+  return (
+    <>
+      <div className="flex-1 overflow-y-auto p-3 md:p-6 scroll-smooth" ref={scrollRef}>
+        {displayMessages.length === 0 && (
+          <div className="h-full flex flex-col items-center justify-center text-gray-300 opacity-50 space-y-2">
+            <div className="text-3xl md:text-4xl border-2 border-current p-2">_</div>
+            <div className="text-[10px] md:text-xs font-bold tracking-widest">AWAITING_INPUT...</div>
+          </div>
+        )}
+        {displayMessages.map((m) => (
+          <MessageBubble
+            key={m.id}
+            message={m}
+            onToolConfirm={handleToolConfirm}
+            onOpenSpreadsheet={onOpenSpreadsheet}
+          />
+        ))}
+        {isLoading && (
+          <div className="text-[10px] text-gray-400 animate-pulse font-bold">
+            AI IS PROCESSING_DATA...
+          </div>
+        )}
+      </div>
+      <MessageInput
+        value={input}
+        onChange={setInput}
+        onSend={handleSend}
+        onOpenTable={() => onOpenSpreadsheet('Sheet1')}
+        disabled={isLoading || !apiKey || !!pendingConfirmation}
+        placeholder={
+          !apiKey
+            ? 'Set API key to chat...'
+            : pendingConfirmation
+            ? 'Waiting for confirmation...'
+            : 'Type message... [CTRL+ENTER]'
+        }
+      />
+    </>
+  );
+};
+
+
+// Static mode chat component (GitHub Pages)
+const StaticChat: React.FC<ChatAreaProps & { scrollRef: React.RefObject<HTMLDivElement | null> }> = ({
+  thread,
+  initialMessages,
+  apiKey,
+  onOpenSpreadsheet,
+  onMessagesChange,
+  scrollRef,
+}) => {
+  const {
+    messages,
+    input,
+    setInput,
+    handleSubmit,
+    isLoading,
+    setMessages,
+  } = useStaticChat({
+    threadId: thread?.id || '',
+    apiKey,
+    initialMessages: initialMessages.map((m) => ({
+      id: m.id,
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+      createdAt: new Date(m.createdAt),
+    })),
+    onFinish: onMessagesChange,
+  });
+
+  useEffect(() => {
+    setMessages(
+      initialMessages.map((m) => ({
+        id: m.id,
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+        createdAt: new Date(m.createdAt),
+      }))
+    );
+  }, [thread?.id, initialMessages, setMessages]);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, scrollRef]);
+
+  const handleToolConfirm = async (_toolCallId: string, _confirmed: boolean) => {
+    // Tool confirmation not supported in static mode
+  };
+
+  const handleSend = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!input.trim() || !apiKey) return;
+    handleSubmit(e);
+  };
+
+  const displayMessages: Message[] = messages.map((m: ChatMessage) => ({
+    id: m.id,
+    threadId: thread?.id || '',
+    role: m.role as 'user' | 'assistant',
+    content: m.content,
+    createdAt: m.createdAt || new Date(),
+  }));
+
+  return (
+    <>
+      <div className="flex-1 overflow-y-auto p-3 md:p-6 scroll-smooth" ref={scrollRef}>
+        {displayMessages.length === 0 && (
+          <div className="h-full flex flex-col items-center justify-center text-gray-300 opacity-50 space-y-2">
+            <div className="text-3xl md:text-4xl border-2 border-current p-2">_</div>
+            <div className="text-[10px] md:text-xs font-bold tracking-widest">AWAITING_INPUT...</div>
+            <div className="text-[8px] text-yellow-600 mt-4">STATIC MODE - Direct OpenAI API</div>
+          </div>
+        )}
+        {displayMessages.map((m) => (
+          <MessageBubble
+            key={m.id}
+            message={m}
+            onToolConfirm={handleToolConfirm}
+            onOpenSpreadsheet={onOpenSpreadsheet}
+          />
+        ))}
+        {isLoading && (
+          <div className="text-[10px] text-gray-400 animate-pulse font-bold">
+            AI IS PROCESSING_DATA...
+          </div>
+        )}
+      </div>
+      <MessageInput
+        value={input}
+        onChange={setInput}
+        onSend={handleSend}
+        onOpenTable={() => onOpenSpreadsheet('Sheet1')}
+        disabled={isLoading || !apiKey}
+        placeholder={!apiKey ? 'Set API key to chat...' : 'Type message... [CTRL+ENTER]'}
+      />
+    </>
+  );
+};
+
+export const ChatArea: React.FC<ChatAreaProps> = (props) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [staticMode, setStaticMode] = useState(false);
+
+  useEffect(() => {
+    setStaticMode(isStaticMode());
+  }, []);
+
+  const { thread } = props;
 
   if (!thread) {
     return (
@@ -116,45 +275,17 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         <div className="truncate">
           <span className="text-[10px] text-gray-500 mr-2">ACTIVE_THREAD:</span>
           <span className="text-xs font-bold">{thread.title}</span>
+          {staticMode && (
+            <span className="ml-2 text-[8px] text-yellow-600 uppercase">[STATIC]</span>
+          )}
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-3 md:p-6 scroll-smooth" ref={scrollRef}>
-        {displayMessages.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center text-gray-300 opacity-50 space-y-2">
-            <div className="text-3xl md:text-4xl border-2 border-current p-2">_</div>
-            <div className="text-[10px] md:text-xs font-bold tracking-widest">AWAITING_INPUT...</div>
-          </div>
-        )}
-        {displayMessages.map((m) => (
-          <MessageBubble
-            key={m.id}
-            message={m}
-            onToolConfirm={handleToolConfirm}
-            onOpenSpreadsheet={onOpenSpreadsheet}
-          />
-        ))}
-        {isLoading && (
-          <div className="text-[10px] text-gray-400 animate-pulse font-bold">
-            AI IS PROCESSING_DATA...
-          </div>
-        )}
-      </div>
-
-      <MessageInput
-        value={input}
-        onChange={setInput}
-        onSend={handleSend}
-        onOpenTable={() => onOpenSpreadsheet('Sheet1')}
-        disabled={isLoading || !apiKey || !!pendingConfirmation}
-        placeholder={
-          !apiKey
-            ? 'Set API key to chat...'
-            : pendingConfirmation
-            ? 'Waiting for confirmation...'
-            : 'Type message... [CTRL+ENTER]'
-        }
-      />
+      {staticMode ? (
+        <StaticChat {...props} scrollRef={scrollRef} />
+      ) : (
+        <ServerChat {...props} scrollRef={scrollRef} />
+      )}
     </div>
   );
 };

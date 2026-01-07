@@ -119,7 +119,7 @@ export function HomePage() {
       {/* Main Area */}
       <main className="flex-1 flex flex-col bg-white overflow-hidden">
         {/* Top Bar with Menu and Settings - centered vertically with header */}
-        <div className="absolute top-0 right-2 md:right-6 left-2 md:left-auto z-10 h-12 md:h-14 flex items-center justify-between md:justify-end gap-3">
+        <div className="absolute top-2 md:top-3 right-2 md:right-6 left-2 md:left-auto z-10 flex items-center justify-between md:justify-end gap-3">
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsSidebarOpen(true)}

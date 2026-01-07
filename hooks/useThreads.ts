@@ -2,6 +2,16 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Thread, Message } from '@/types';
+import { getIndexedDB } from '@/lib/db/indexeddb';
+
+// Detect if running in static mode (GitHub Pages)
+function isStaticMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    window.location.hostname.includes('github.io') ||
+    process.env.NEXT_PUBLIC_STATIC_MODE === 'true'
+  );
+}
 
 interface UseThreadsReturn {
   threads: Thread[];
@@ -21,31 +31,48 @@ export function useThreads(): UseThreadsReturn {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true); // Start as true to show loading on first render
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [staticMode, setStaticMode] = useState(false);
+
+  // Check mode on mount
+  useEffect(() => {
+    setStaticMode(isStaticMode());
+  }, []);
 
   const activeThread = useMemo(() => {
     if (!activeThreadId || !threads.length) return null;
     return threads.find((t) => t?.id === activeThreadId) ?? null;
   }, [threads, activeThreadId]);
 
-  // Load threads with timeout and retry logic
+  // Load threads
   const refreshThreads = useCallback(async () => {
     setLoading(true);
     setError(null);
     
+    if (staticMode) {
+      // IndexedDB mode
+      try {
+        const db = getIndexedDB();
+        const threadsData = await db.getThreads();
+        setThreads(threadsData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load threads');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+    
+    // Server API mode
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     
     try {
-      const response = await fetch('/api/threads', {
-        signal: controller.signal,
-      });
+      const response = await fetch('/api/threads', { signal: controller.signal });
       clearTimeout(timeoutId);
       
-      if (!response.ok) {
-        throw new Error('Failed to load threads');
-      }
+      if (!response.ok) throw new Error('Failed to load threads');
       const json = await response.json();
       const threadsData = json.data || json.threads || [];
       const validThreads = threadsData.filter(
@@ -56,7 +83,6 @@ export function useThreads(): UseThreadsReturn {
     } catch (err) {
       clearTimeout(timeoutId);
       if (err instanceof Error && err.name === 'AbortError') {
-        console.warn('Threads fetch timed out, showing empty state');
         setThreads([]);
       } else {
         setError(err instanceof Error ? err.message : 'Unknown error');
@@ -64,7 +90,7 @@ export function useThreads(): UseThreadsReturn {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [staticMode]);
 
   // Load messages for active thread
   const refreshMessages = useCallback(async () => {
@@ -72,6 +98,20 @@ export function useThreads(): UseThreadsReturn {
       setMessages([]);
       return;
     }
+    
+    if (staticMode) {
+      // IndexedDB mode
+      try {
+        const db = getIndexedDB();
+        const messagesData = await db.getMessages(activeThreadId);
+        setMessages(messagesData);
+      } catch (err) {
+        console.error('Failed to load messages:', err);
+      }
+      return;
+    }
+    
+    // Server API mode
     try {
       const response = await fetch(`/api/messages?threadId=${activeThreadId}`);
       if (!response.ok) throw new Error('Failed to load messages');
@@ -80,7 +120,7 @@ export function useThreads(): UseThreadsReturn {
     } catch (err) {
       console.error('Failed to load messages:', err);
     }
-  }, [activeThreadId]);
+  }, [activeThreadId, staticMode]);
 
   // Initial load
   useEffect(() => {
@@ -94,6 +134,21 @@ export function useThreads(): UseThreadsReturn {
 
   // Create new thread
   const createThread = useCallback(async (): Promise<Thread | null> => {
+    if (staticMode) {
+      // IndexedDB mode
+      try {
+        const db = getIndexedDB();
+        const newThread = await db.createThread({ title: 'New Thread' });
+        setThreads((prev) => [newThread, ...prev]);
+        setActiveThreadId(newThread.id);
+        return newThread;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to create thread');
+        return null;
+      }
+    }
+    
+    // Server API mode
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
@@ -106,9 +161,7 @@ export function useThreads(): UseThreadsReturn {
       });
       clearTimeout(timeoutId);
       
-      if (!response.ok) {
-        throw new Error('Failed to create thread');
-      }
+      if (!response.ok) throw new Error('Failed to create thread');
       
       const json = await response.json();
       const newThread = json.data || json.thread;
@@ -120,14 +173,30 @@ export function useThreads(): UseThreadsReturn {
       setError(err instanceof Error ? err.message : 'Unknown error');
       return null;
     }
-  }, []);
+  }, [staticMode]);
 
   // Delete thread
   const deleteThread = useCallback(async (id: string): Promise<boolean> => {
+    if (staticMode) {
+      // IndexedDB mode
+      try {
+        const db = getIndexedDB();
+        await db.deleteThread(id);
+        setThreads((prev) => prev.filter((t) => t.id !== id));
+        if (activeThreadId === id) {
+          setActiveThreadId(null);
+          setMessages([]);
+        }
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to delete thread');
+        return false;
+      }
+    }
+    
+    // Server API mode
     try {
-      const response = await fetch(`/api/threads/${id}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(`/api/threads/${id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete thread');
       setThreads((prev) => prev.filter((t) => t.id !== id));
       if (activeThreadId === id) {
@@ -139,7 +208,7 @@ export function useThreads(): UseThreadsReturn {
       setError(err instanceof Error ? err.message : 'Unknown error');
       return false;
     }
-  }, [activeThreadId]);
+  }, [activeThreadId, staticMode]);
 
   return {
     threads,
