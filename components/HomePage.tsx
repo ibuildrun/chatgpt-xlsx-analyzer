@@ -91,7 +91,7 @@ export function HomePage() {
       {/* Main Area */}
       <main className="flex-1 flex flex-col bg-white overflow-hidden">
         {/* Top Bar with Settings */}
-        <div className="absolute top-6 right-6 z-10">
+        <div className="absolute top-6 right-6 z-10 flex items-center whitespace-nowrap">
           <SettingsButton
             hasApiKey={!!apiKey && isValid}
             onClick={() => setIsSettingsOpen(true)}

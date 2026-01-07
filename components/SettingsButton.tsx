@@ -13,15 +13,15 @@ export const SettingsButton: React.FC<SettingsButtonProps> = ({
   onClick,
 }) => {
   return (
-    <div className="flex flex-row items-center gap-3 whitespace-nowrap">
+    <div className="inline-flex items-center gap-3">
       {!hasApiKey && (
-        <span className="text-[10px] text-yellow-700 font-bold uppercase tracking-wider">
+        <span className="text-[10px] text-yellow-700 font-bold uppercase tracking-wider shrink-0">
           API KEY REQUIRED
         </span>
       )}
       <button
         onClick={onClick}
-        className={`flex items-center gap-2 px-3 py-2 text-xs font-bold border transition-colors whitespace-nowrap ${
+        className={`inline-flex items-center gap-2 px-3 py-2 text-xs font-bold border transition-colors shrink-0 ${
           hasApiKey
             ? 'border-green-600 text-green-600 hover:bg-green-50'
             : 'border-yellow-600 text-yellow-600 hover:bg-yellow-50'
