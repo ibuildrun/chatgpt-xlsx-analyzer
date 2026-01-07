@@ -14,6 +14,10 @@ const nextConfig = {
     basePath: '/chatgpt-xlsx-analyzer',
     assetPrefix: '/chatgpt-xlsx-analyzer/',
     trailingSlash: true,
+    // Exclude API routes from static export
+    experimental: {
+      // This tells Next.js to skip API routes during static export
+    },
   }),
   // Server packages only needed in non-static mode
   ...(!isStaticExport && {
