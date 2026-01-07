@@ -1,2 +1,10 @@
-bun run lint
-bun run typecheck
+#!/bin/sh
+
+# Use npm if bun is not available (e.g., in CI)
+if command -v bun >/dev/null 2>&1; then
+  bun run lint
+  bun run typecheck
+else
+  npm run lint
+  npm run typecheck
+fi
