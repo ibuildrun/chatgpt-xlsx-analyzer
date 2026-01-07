@@ -13,7 +13,7 @@ export const SettingsButton: React.FC<SettingsButtonProps> = ({
   onClick,
 }) => {
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className="flex items-center gap-3">
       {!hasApiKey && (
         <span className="text-[10px] text-yellow-700 font-bold uppercase tracking-wider">
           API KEY REQUIRED
