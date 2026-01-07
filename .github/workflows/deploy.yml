@@ -141,6 +141,15 @@ jobs:
             # Cleanup backup after successful restart
             rm -rf .next.backup
             
+            # Generate static index.html from Node.js output (workaround for FastCGI issues)
+            echo "=== Generating static index.html ==="
+            curl -s http://127.0.0.1:3000/ > index.html
+            if [ -s index.html ]; then
+              echo "index.html generated successfully ($(wc -c < index.html) bytes)"
+            else
+              echo "WARNING: Failed to generate index.html"
+            fi
+            
             echo "Deployment completed!"
           ENDSSH
 
