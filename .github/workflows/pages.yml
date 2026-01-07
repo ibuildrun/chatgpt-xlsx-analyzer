@@ -34,22 +34,17 @@ jobs:
 
       - name: Prepare for static export
         run: |
-          # Temporarily move API routes out of the way for static export
-          mv app/api app/api-disabled
+          # Remove API routes completely for static export
+          rm -rf app/api
           
-          # Create a minimal not-found page to handle 404s
-          echo "export default function NotFound() { return null; }" > app/api-disabled-placeholder.tsx
+          # Remove server-side database imports from lib
+          rm -f lib/db/index.ts
 
       - name: Build static export
         env:
           STATIC_EXPORT: "true"
           NEXT_PUBLIC_STATIC_MODE: "true"
         run: npm run build
-
-      - name: Restore API routes
-        run: |
-          mv app/api-disabled app/api
-          rm -f app/api-disabled-placeholder.tsx
 
       - name: Add .nojekyll file
         run: touch out/.nojekyll
