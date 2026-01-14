@@ -3,6 +3,7 @@
 import React from 'react';
 import type { Message } from '@/types';
 import { ToolRenderer } from './ToolRenderer';
+import { CodeBlock } from './CodeBlock';
 
 interface MessageBubbleProps {
   message: Message;
@@ -11,26 +12,78 @@ interface MessageBubbleProps {
   onMentionClick?: (mention: string) => void;
 }
 
-// Parse mentions like @Sheet1!A1:B3
-function parseMentions(content: string): (string | { type: 'mention'; value: string })[] {
-  const mentionRegex = /@([A-Za-z0-9_]+![A-Z]+\d+(?::[A-Z]+\d+)?)/g;
-  const parts: (string | { type: 'mention'; value: string })[] = [];
+type ContentPart = 
+  | { type: 'text'; value: string }
+  | { type: 'mention'; value: string }
+  | { type: 'code'; language: string; code: string }
+  | { type: 'inline-code'; value: string };
+
+// Parse content with code blocks, inline code, and mentions
+function parseContent(content: string): ContentPart[] {
+  const parts: ContentPart[] = [];
+  
+  // First, extract code blocks (```language\ncode```)
+  const codeBlockRegex = /```(\w*)\n?([\s\S]*?)```/g;
   let lastIndex = 0;
   let match;
 
-  while ((match = mentionRegex.exec(content)) !== null) {
+  while ((match = codeBlockRegex.exec(content)) !== null) {
+    // Process text before code block
     if (match.index > lastIndex) {
-      parts.push(content.slice(lastIndex, match.index));
+      const textBefore = content.slice(lastIndex, match.index);
+      parts.push(...parseTextWithMentionsAndInlineCode(textBefore));
     }
-    parts.push({ type: 'mention', value: match[1] });
+    
+    // Add code block
+    parts.push({
+      type: 'code',
+      language: match[1] || 'text',
+      code: match[2],
+    });
+    
     lastIndex = match.index + match[0].length;
   }
 
+  // Process remaining text
   if (lastIndex < content.length) {
-    parts.push(content.slice(lastIndex));
+    parts.push(...parseTextWithMentionsAndInlineCode(content.slice(lastIndex)));
   }
 
-  return parts.length > 0 ? parts : [content];
+  return parts.length > 0 ? parts : [{ type: 'text', value: content }];
+}
+
+// Parse text for inline code and mentions
+function parseTextWithMentionsAndInlineCode(text: string): ContentPart[] {
+  const parts: ContentPart[] = [];
+  
+  // Combined regex for inline code and mentions
+  const combinedRegex = /(`[^`]+`)|(@[A-Za-z0-9_]+![A-Z]+\d+(?::[A-Z]+\d+)?)/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = combinedRegex.exec(text)) !== null) {
+    // Add text before match
+    if (match.index > lastIndex) {
+      parts.push({ type: 'text', value: text.slice(lastIndex, match.index) });
+    }
+
+    if (match[1]) {
+      // Inline code
+      parts.push({ type: 'inline-code', value: match[1].slice(1, -1) });
+    } else if (match[2]) {
+      // Mention
+      parts.push({ type: 'mention', value: match[2].slice(1) });
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push({ type: 'text', value: text.slice(lastIndex) });
+  }
+
+  return parts;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -40,7 +93,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   onMentionClick,
 }) => {
   const isUser = message.role === 'user';
-  const parts = parseMentions(message.content);
+  const parts = parseContent(message.content);
 
   const formatTime = (date: Date) => {
     return new Date(date).toLocaleTimeString('en-US', {
@@ -48,6 +101,62 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       minute: '2-digit',
       hour12: false,
     });
+  };
+
+  const renderPart = (part: ContentPart, index: number) => {
+    switch (part.type) {
+      case 'text':
+        return <span key={index}>{part.value}</span>;
+      
+      case 'code':
+        return (
+          <CodeBlock
+            key={index}
+            code={part.code}
+            language={part.language}
+            isDarkBg={isUser}
+          />
+        );
+      
+      case 'inline-code':
+        return (
+          <code
+            key={index}
+            className={`font-mono text-xs px-1.5 py-0.5 rounded ${
+              isUser
+                ? 'bg-gray-700 text-green-300'
+                : 'bg-gray-200 text-pink-600'
+            }`}
+          >
+            {part.value}
+          </code>
+        );
+      
+      case 'mention':
+        return (
+          <button
+            key={index}
+            onClick={() => {
+              const [sheet, range] = part.value.split('!');
+              if (onMentionClick) {
+                onMentionClick(part.value);
+              } else if (onOpenSpreadsheet) {
+                onOpenSpreadsheet(sheet, range);
+              }
+            }}
+            className={`font-mono text-xs px-1 py-0.5 mx-0.5 ${
+              isUser
+                ? 'bg-white text-black hover:bg-gray-200'
+                : 'bg-black text-white hover:bg-gray-800'
+            } transition-colors`}
+          >
+            @{part.value}
+          </button>
+        );
+      
+      default:
+        return null;
+    }
   };
 
   return (
@@ -64,31 +173,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             {isUser ? 'USER' : 'ASSISTANT'} / {formatTime(message.createdAt)}
           </div>
           <div className="text-sm leading-relaxed whitespace-pre-wrap">
-            {parts.map((part, index) => {
-              if (typeof part === 'string') {
-                return <span key={index}>{part}</span>;
-              }
-              return (
-                <button
-                  key={index}
-                  onClick={() => {
-                    const [sheet, range] = part.value.split('!');
-                    if (onMentionClick) {
-                      onMentionClick(part.value);
-                    } else if (onOpenSpreadsheet) {
-                      onOpenSpreadsheet(sheet, range);
-                    }
-                  }}
-                  className={`font-mono text-xs px-1 py-0.5 mx-0.5 ${
-                    isUser
-                      ? 'bg-white text-black hover:bg-gray-200'
-                      : 'bg-black text-white hover:bg-gray-800'
-                  } transition-colors`}
-                >
-                  @{part.value}
-                </button>
-              );
-            })}
+            {parts.map(renderPart)}
           </div>
         </div>
 

@@ -194,3 +194,22 @@ export const ChevronLeftIcon: React.FC<IconProps> = ({ className = '', size = 16
     <path d="M10 3L5 8l5 5" />
   </svg>
 );
+
+export const KeyboardIcon: React.FC<IconProps> = ({ className = '', size = 16 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="square"
+    className={className}
+  >
+    <rect x="1" y="3" width="14" height="10" />
+    <line x1="4" y1="6" x2="5" y2="6" />
+    <line x1="7" y1="6" x2="9" y2="6" />
+    <line x1="11" y1="6" x2="12" y2="6" />
+    <line x1="4" y1="9" x2="12" y2="9" />
+  </svg>
+);

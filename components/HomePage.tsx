@@ -1,19 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ThreadList } from '@/components/ThreadList';
 import { ChatArea } from '@/components/ChatArea';
 import { SpreadsheetModal } from '@/components/SpreadsheetModal';
 import { ApiKeyManager } from '@/components/ApiKeyManager';
 import { SettingsButton } from '@/components/SettingsButton';
-import { LoadingIcon, TerminalIcon, MenuIcon } from '@/components/icons';
+import { HotkeysHelp } from '@/components/HotkeysHelp';
+import { LoadingIcon, TerminalIcon, MenuIcon, KeyboardIcon } from '@/components/icons';
 import { useThreads } from '@/hooks/useThreads';
 import { useSpreadsheet } from '@/hooks/useSpreadsheet';
 import { useApiKey } from '@/hooks/useApiKey';
+import { useHotkeys } from '@/hooks/useHotkeys';
 
 export function HomePage() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isHotkeysHelpOpen, setIsHotkeysHelpOpen] = useState(false);
   
   const {
     threads,
@@ -64,6 +67,94 @@ export function HomePage() {
   const handleInsertMention = (mention: string) => {
     setInputValue((prev: string) => (prev ? `${prev} ${mention}` : mention));
   };
+
+  // Navigate to next/prev thread
+  const navigateThread = useCallback((direction: 'next' | 'prev') => {
+    if (threads.length === 0) return;
+    const currentIndex = threads.findIndex(t => t.id === activeThreadId);
+    let newIndex: number;
+    
+    if (direction === 'next') {
+      newIndex = currentIndex < threads.length - 1 ? currentIndex + 1 : 0;
+    } else {
+      newIndex = currentIndex > 0 ? currentIndex - 1 : threads.length - 1;
+    }
+    
+    setActiveThreadId(threads[newIndex].id);
+  }, [threads, activeThreadId, setActiveThreadId]);
+
+  // Focus message input
+  const focusInput = useCallback(() => {
+    // Find textarea in the DOM
+    const textarea = document.querySelector('textarea');
+    if (textarea) {
+      textarea.focus();
+    }
+  }, []);
+
+  // Global hotkeys
+  useHotkeys([
+    {
+      key: 'n',
+      ctrl: true,
+      description: 'New thread',
+      action: () => {
+        createThread();
+        setIsSidebarOpen(false);
+      },
+    },
+    {
+      key: 'b',
+      ctrl: true,
+      description: 'Toggle sidebar',
+      action: () => setIsSidebarOpen(prev => !prev),
+    },
+    {
+      key: ',',
+      ctrl: true,
+      description: 'Open settings',
+      action: () => setIsSettingsOpen(true),
+    },
+    {
+      key: 'g',
+      ctrl: true,
+      description: 'Open spreadsheet',
+      action: () => openSpreadsheet('Sheet1'),
+    },
+    {
+      key: '/',
+      description: 'Focus input',
+      action: focusInput,
+    },
+    {
+      key: 'Escape',
+      description: 'Close modal',
+      action: () => {
+        if (isHotkeysHelpOpen) setIsHotkeysHelpOpen(false);
+        else if (isSettingsOpen) setIsSettingsOpen(false);
+        else if (isModalOpen) closeSpreadsheet();
+        else if (isSidebarOpen) setIsSidebarOpen(false);
+      },
+    },
+    {
+      key: 'ArrowDown',
+      alt: true,
+      description: 'Next thread',
+      action: () => navigateThread('next'),
+    },
+    {
+      key: 'ArrowUp',
+      alt: true,
+      description: 'Previous thread',
+      action: () => navigateThread('prev'),
+    },
+    {
+      key: '?',
+      shift: true,
+      description: 'Show hotkeys help',
+      action: () => setIsHotkeysHelpOpen(true),
+    },
+  ]);
 
   // Use inputValue in a no-op to satisfy ESLint (value is used by SpreadsheetModal callback)
   void inputValue;
@@ -119,7 +210,7 @@ export function HomePage() {
       {/* Main Area */}
       <main className="flex-1 flex flex-col bg-white overflow-hidden">
         {/* Top Bar with Menu and Settings - centered vertically with header */}
-        <div className="absolute top-2 md:top-3 right-2 md:right-6 left-2 md:left-auto z-10 flex items-center justify-between md:justify-end gap-3">
+        <div className="absolute top-2 md:top-3 right-2 md:right-6 left-2 md:left-auto z-10 flex items-center justify-between md:justify-end gap-2 md:gap-3">
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsSidebarOpen(true)}
@@ -129,10 +220,22 @@ export function HomePage() {
             <span>THREADS</span>
           </button>
           
-          <SettingsButton
-            hasApiKey={!!apiKey && isValid}
-            onClick={() => setIsSettingsOpen(true)}
-          />
+          <div className="flex items-center gap-2">
+            {/* Hotkeys Help Button */}
+            <button
+              onClick={() => setIsHotkeysHelpOpen(true)}
+              className="hidden md:flex items-center gap-1 px-2 py-1.5 border border-gray-300 bg-white text-[10px] font-bold hover:bg-gray-100 text-gray-600"
+              title="Keyboard shortcuts (?)"
+            >
+              <KeyboardIcon size={14} />
+              <span>?</span>
+            </button>
+            
+            <SettingsButton
+              hasApiKey={!!apiKey && isValid}
+              onClick={() => setIsSettingsOpen(true)}
+            />
+          </div>
         </div>
 
         {/* Chat Area */}
@@ -187,6 +290,12 @@ export function HomePage() {
         isValid={isValid}
         onSave={setApiKey}
         onRemove={removeApiKey}
+      />
+
+      {/* Hotkeys Help */}
+      <HotkeysHelp
+        isOpen={isHotkeysHelpOpen}
+        onClose={() => setIsHotkeysHelpOpen(false)}
       />
     </div>
   );

@@ -4,6 +4,68 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { CloseIcon, CheckIcon } from './icons';
 import type { SpreadsheetData, CellData } from '@/types';
 
+// Detect if running in static mode (GitHub Pages)
+function isStaticMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    window.location.hostname.includes('github.io') ||
+    process.env.NEXT_PUBLIC_STATIC_MODE === 'true'
+  );
+}
+
+// Demo data for static mode
+function generateDemoData(sheetName: string): SpreadsheetData {
+  const cells: Record<string, CellData> = {};
+  const rowCount = 10;
+  const colCount = 6;
+  
+  // Generate column headers
+  const headers = ['Product', 'Category', 'Price', 'Quantity', 'Total', 'Status'];
+  const categories = ['Electronics', 'Clothing', 'Food', 'Books', 'Home'];
+  const statuses = ['In Stock', 'Low Stock', 'Out of Stock'];
+  const products = [
+    'Laptop', 'T-Shirt', 'Coffee', 'Novel', 'Lamp',
+    'Phone', 'Jeans', 'Tea', 'Textbook', 'Chair',
+  ];
+  
+  // Header row
+  headers.forEach((header, col) => {
+    const addr = `${String.fromCharCode(65 + col)}1`;
+    cells[addr] = { address: addr, value: header };
+  });
+  
+  // Data rows
+  for (let row = 1; row < rowCount; row++) {
+    const price = Math.floor(Math.random() * 100) + 10;
+    const qty = Math.floor(Math.random() * 50) + 1;
+    
+    const rowData = [
+      products[row - 1] || `Item ${row}`,
+      categories[Math.floor(Math.random() * categories.length)],
+      `$${price}`,
+      qty,
+      `$${price * qty}`,
+      statuses[Math.floor(Math.random() * statuses.length)],
+    ];
+    
+    rowData.forEach((value, col) => {
+      const addr = `${String.fromCharCode(65 + col)}${row + 1}`;
+      cells[addr] = { 
+        address: addr, 
+        value,
+        formula: col === 4 ? `C${row + 1}*D${row + 1}` : undefined,
+      };
+    });
+  }
+  
+  return {
+    sheetName,
+    rowCount,
+    colCount,
+    cells,
+  };
+}
+
 interface SpreadsheetModalProps {
   isOpen: boolean;
   sheetName: string;
@@ -29,11 +91,24 @@ export const SpreadsheetModal: React.FC<SpreadsheetModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [selection, setSelection] = useState<{ start: CellPosition; end: CellPosition } | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
+  const [staticMode, setStaticMode] = useState(false);
+
+  useEffect(() => {
+    setStaticMode(isStaticMode());
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
+      // In static mode, use demo data
+      if (staticMode) {
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 300));
+        setData(generateDemoData(sheetName));
+        return;
+      }
+      
       const response = await fetch(`/api/xlsx?action=data&sheet=${encodeURIComponent(sheetName)}`);
       if (!response.ok) {
         throw new Error('Failed to load spreadsheet data');
@@ -41,11 +116,17 @@ export const SpreadsheetModal: React.FC<SpreadsheetModalProps> = ({
       const result = await response.json();
       setData(result.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      // Fallback to demo data on error
+      if (staticMode || (err instanceof Error && err.message.includes('Failed'))) {
+        setData(generateDemoData(sheetName));
+        setError(null);
+      } else {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      }
     } finally {
       setLoading(false);
     }
-  }, [sheetName]);
+  }, [sheetName, staticMode]);
 
   useEffect(() => {
     if (isOpen && sheetName) {
@@ -260,6 +341,9 @@ export const SpreadsheetModal: React.FC<SpreadsheetModalProps> = ({
         <div className="p-2 md:p-3 border-t border-black bg-gray-50 text-[9px] md:text-[10px] text-gray-500">
           <span className="hidden md:inline">Click and drag to select cells. Click &quot;INSERT&quot; to add reference to chat.</span>
           <span className="md:hidden">Tap cells to select. Tap &quot;ADD&quot; to insert.</span>
+          {staticMode && (
+            <span className="ml-2 text-yellow-600 uppercase">[DEMO DATA]</span>
+          )}
         </div>
       </div>
     </div>
