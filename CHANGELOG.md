@@ -12,6 +12,24 @@
 * **pages:** remove api routes completely for static export ([c4902ea](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/commit/c4902ea94f3756d05f05f1740169be5f73e2d1ef))
 * **pages:** remove force-dynamic from layout for static export ([1dfcd87](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/commit/1dfcd87b9571f06255c9b9206a7065c4fb576390))
 
+### Documentation
+
+* update demo link to GitHub Pages ([68caa08](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/commit/68caa08af3aa0eae6f60bf690b4c744efea44812))
+
+## [1.1.0](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/compare/v1.0.1...v1.1.0) (2026-01-14)
+
+### Features
+
+* add github pages support with indexeddb storage ([5a9c2c8](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/commit/5a9c2c8361fedf2895d29e493258d87613119756))
+* add syntax highlighting, hotkeys, and static mode for spreadsheet ([b320012](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/commit/b320012a28ef02a71d0a17c7b056cd8e50a1938b))
+
+### Bug Fixes
+
+* **pages:** add force-static to not-found page ([af3dce6](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/commit/af3dce6a049f2ee5e2092a860ff37f70f4b681d3))
+* **pages:** exclude api routes from static export ([a60dae1](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/commit/a60dae1984573a502aef98975781723c78602e40))
+* **pages:** remove api routes completely for static export ([c4902ea](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/commit/c4902ea94f3756d05f05f1740169be5f73e2d1ef))
+* **pages:** remove force-dynamic from layout for static export ([1dfcd87](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/commit/1dfcd87b9571f06255c9b9206a7065c4fb576390))
+
 ## [1.1.0](https://github.com/ibuildrun/chatgpt-xlsx-analyzer/compare/v1.0.1...v1.1.0) (2026-01-07)
 
 ### Features
