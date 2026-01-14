@@ -4,7 +4,7 @@
 
 ## Демо
 
-**Live Demo:** https://ai.ibuildrun.ru
+**Live Demo:** https://ibuildrun.github.io/chatgpt-xlsx-analyzer/
 
 ## Соответствие ТЗ
 
